@@ -4,7 +4,7 @@
  */
 
 import type { Suggestion as PrismaSuggestion, Prisma } from '@prisma/client'
-import type { Suggestion, SuggestionStatus, TenantContext } from '@oneshot/shared-types'
+import type { Suggestion, SuggestionStatus, WorkflowType, TenantContext } from '@oneshot/shared-types'
 import { prisma } from '../client.js'
 
 export async function createSuggestion(
@@ -43,12 +43,33 @@ export async function getSuggestionById(
   return row ? mapSuggestion(row, ctx) : null
 }
 
-export async function listPendingSuggestions(ctx: TenantContext): Promise<Suggestion[]> {
+export interface ListSuggestionsOpts {
+  workflowType?: WorkflowType
+  status?: SuggestionStatus
+  limit?: number
+  offset?: number
+}
+
+export async function listSuggestions(
+  ctx: TenantContext,
+  opts: ListSuggestionsOpts = {},
+): Promise<Suggestion[]> {
   const rows = await prisma.suggestion.findMany({
-    where: { operatorId: ctx.operatorId, status: 'pending' },
+    where: {
+      operatorId: ctx.operatorId,
+      ...(opts.status ? { status: opts.status } : {}),
+      ...(opts.workflowType ? { workflowType: opts.workflowType } : {}),
+    },
     orderBy: { score: 'desc' },
+    take: opts.limit ?? 100,
+    skip: opts.offset ?? 0,
   })
   return rows.map((r) => mapSuggestion(r, ctx))
+}
+
+/** @deprecated use listSuggestions with status:'pending' */
+export async function listPendingSuggestions(ctx: TenantContext): Promise<Suggestion[]> {
+  return listSuggestions(ctx, { status: 'pending' })
 }
 
 export async function updateSuggestionStatus(
@@ -67,7 +88,6 @@ export async function updateSuggestionStatus(
       ...(reviewedBy ? { reviewedAt: new Date() } : {}),
     },
   })
-  // Enforce that updated suggestion belongs to this tenant
   if (row.operatorId !== ctx.operatorId) {
     throw new Error('Tenant isolation violation: suggestion does not belong to this operator')
   }

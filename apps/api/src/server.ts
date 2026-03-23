@@ -17,6 +17,7 @@ import { tenantHook } from './hooks/tenant.js'
 import { healthRoutes } from './routes/health.js'
 import { suggestionRoutes } from './routes/suggestions.js'
 import { tenantRoutes } from './routes/tenants.js'
+import { streamRoutes } from './routes/stream.js'
 
 export async function buildServer() {
   const app = Fastify({
@@ -45,6 +46,7 @@ export async function buildServer() {
   await app.register(healthRoutes, { prefix: '/health' })
   await app.register(suggestionRoutes, { prefix: '/api/v1/suggestions' })
   await app.register(tenantRoutes, { prefix: '/api/v1/tenants' })
+  await app.register(streamRoutes, { prefix: '/api/v1/stream' })
 
   return app
 }
