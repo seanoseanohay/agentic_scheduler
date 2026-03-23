@@ -1,13 +1,14 @@
 /**
- * LiveFspClient — stub for Phase 1 implementation.
+ * LiveFspClient — real HTTP implementation for Phase 1.
  *
- * TODO (Phase 1):
- *  - Implement all IFspClient methods against real FSP REST endpoints
- *  - Add retry-with-backoff (use exponential backoff on 429/5xx)
- *  - Add Retry-After header handling for rate limits
- *  - Add idempotency key header on all mutation calls
- *  - Normalise FSP response shapes into shared-types
- *  - Add per-tenant throttle budget tracking
+ * URL conventions follow FSP REST API patterns. All mutations carry an
+ * Idempotency-Key header so retries do not double-book.
+ *
+ * Reliability invariants (architecture.md FSP Integration Adapter):
+ *  - Retry with exponential backoff on 429/5xx via fetchWithRetry
+ *  - Retry-After header respected for rate limits
+ *  - All responses normalised to shared-types before returning
+ *  - Idempotency keys on all mutations
  */
 
 import type {
@@ -23,73 +24,382 @@ import type {
   FspReservationCreateParams,
 } from '@oneshot/shared-types'
 import type { FspClientConfig, IFspClient } from './client.js'
+import { fetchWithRetry } from './retry.js'
 
 export class LiveFspClient implements IFspClient {
-  constructor(private readonly config: FspClientConfig) {}
+  private readonly retryOpts: { maxRetries: number; baseDelayMs: number }
 
-  private get headers() {
+  constructor(private readonly config: FspClientConfig) {
+    this.retryOpts = { maxRetries: config.maxRetries ?? 3, baseDelayMs: 500 }
+  }
+
+  private get base() {
+    return `${this.config.baseUrl}/operators/${this.config.operatorId}`
+  }
+
+  private get headers(): Record<string, string> {
     return {
       'Content-Type': 'application/json',
+      Accept: 'application/json',
       'X-Api-Key': this.config.apiKey,
       'X-Operator-Id': this.config.operatorId,
     }
   }
 
-  getStudents(): Promise<FspStudent[]> {
-    throw new Error('LiveFspClient.getStudents not yet implemented — Phase 1')
+  private async get<T>(path: string, params?: Record<string, string>): Promise<T> {
+    const url = new URL(`${this.base}${path}`)
+    if (params) {
+      for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v)
+    }
+    const res = await fetchWithRetry(url.toString(), { headers: this.headers }, this.retryOpts)
+    return res.json() as Promise<T>
   }
-  getStudent(_studentId: string): Promise<FspStudent | null> {
-    throw new Error('LiveFspClient.getStudent not yet implemented — Phase 1')
+
+  private async post<T>(path: string, body: unknown, idempotencyKey?: string): Promise<T> {
+    const url = `${this.base}${path}`
+    const headers: Record<string, string> = { ...this.headers }
+    if (idempotencyKey) headers['Idempotency-Key'] = idempotencyKey
+    const res = await fetchWithRetry(
+      url,
+      { method: 'POST', headers, body: JSON.stringify(body) },
+      this.retryOpts,
+    )
+    return res.json() as Promise<T>
   }
-  getInstructors(): Promise<FspInstructor[]> {
-    throw new Error('LiveFspClient.getInstructors not yet implemented — Phase 1')
+
+  // ── Reference data ──────────────────────────────────────────────────────
+
+  async getStudents(): Promise<FspStudent[]> {
+    const data = await this.get<{ students: RawStudent[] }>('/students')
+    return data.students.map(normaliseStudent(this.config.operatorId))
   }
-  getInstructor(_instructorId: string): Promise<FspInstructor | null> {
-    throw new Error('LiveFspClient.getInstructor not yet implemented — Phase 1')
+
+  async getStudent(studentId: string): Promise<FspStudent | null> {
+    try {
+      const data = await this.get<{ student: RawStudent }>(`/students/${studentId}`)
+      return normaliseStudent(this.config.operatorId)(data.student)
+    } catch (e) {
+      if (isNotFound(e)) return null
+      throw e
+    }
   }
-  getAircraft(): Promise<FspAircraft[]> {
-    throw new Error('LiveFspClient.getAircraft not yet implemented — Phase 1')
+
+  async getInstructors(): Promise<FspInstructor[]> {
+    const data = await this.get<{ instructors: RawInstructor[] }>('/instructors')
+    return data.instructors.map(normaliseInstructor(this.config.operatorId))
   }
-  getLocations(): Promise<FspLocation[]> {
-    throw new Error('LiveFspClient.getLocations not yet implemented — Phase 1')
+
+  async getInstructor(instructorId: string): Promise<FspInstructor | null> {
+    try {
+      const data = await this.get<{ instructor: RawInstructor }>(`/instructors/${instructorId}`)
+      return normaliseInstructor(this.config.operatorId)(data.instructor)
+    } catch (e) {
+      if (isNotFound(e)) return null
+      throw e
+    }
   }
-  getReservation(_reservationId: string): Promise<FspReservation | null> {
-    throw new Error('LiveFspClient.getReservation not yet implemented — Phase 1')
+
+  async getAircraft(): Promise<FspAircraft[]> {
+    const data = await this.get<{ aircraft: RawAircraft[] }>('/aircraft')
+    return data.aircraft.map(normaliseAircraft(this.config.operatorId))
   }
-  getReservationsByDateRange(_start: Date, _end: Date): Promise<FspReservation[]> {
-    throw new Error('LiveFspClient.getReservationsByDateRange not yet implemented — Phase 1')
+
+  async getLocations(): Promise<FspLocation[]> {
+    const data = await this.get<{ locations: RawLocation[] }>('/locations')
+    return data.locations.map(normaliseLocation(this.config.operatorId))
   }
-  getCancelledSince(_since: Date): Promise<FspReservation[]> {
-    throw new Error('LiveFspClient.getCancelledSince not yet implemented — Phase 1')
+
+  // ── Schedule reads ──────────────────────────────────────────────────────
+
+  async getReservation(reservationId: string): Promise<FspReservation | null> {
+    try {
+      const data = await this.get<{ reservation: RawReservation }>(`/reservations/${reservationId}`)
+      return normaliseReservation(this.config.operatorId)(data.reservation)
+    } catch (e) {
+      if (isNotFound(e)) return null
+      throw e
+    }
   }
-  getAvailableSlots(_opts: {
+
+  async getReservationsByDateRange(start: Date, end: Date): Promise<FspReservation[]> {
+    const data = await this.get<{ reservations: RawReservation[] }>('/reservations', {
+      start: start.toISOString(),
+      end: end.toISOString(),
+    })
+    return data.reservations.map(normaliseReservation(this.config.operatorId))
+  }
+
+  async getCancelledSince(since: Date): Promise<FspReservation[]> {
+    const data = await this.get<{ reservations: RawReservation[] }>('/reservations/cancelled', {
+      since: since.toISOString(),
+    })
+    return data.reservations.map(normaliseReservation(this.config.operatorId))
+  }
+
+  // ── Availability ────────────────────────────────────────────────────────
+
+  async getAvailableSlots(opts: {
     instructorId?: string
     aircraftId?: string
     locationId?: string
     start: Date
     end: Date
   }): Promise<FspAvailabilitySlot[]> {
-    throw new Error('LiveFspClient.getAvailableSlots not yet implemented — Phase 1')
+    const params: Record<string, string> = {
+      start: opts.start.toISOString(),
+      end: opts.end.toISOString(),
+    }
+    if (opts.instructorId) params['instructorId'] = opts.instructorId
+    if (opts.aircraftId) params['aircraftId'] = opts.aircraftId
+    if (opts.locationId) params['locationId'] = opts.locationId
+
+    const data = await this.get<{ slots: RawSlot[] }>('/availability', params)
+    return data.slots.map(normaliseSlot)
   }
-  getCivilTwilight(_locationId: string, _date: string): Promise<FspCivilTwilight> {
-    throw new Error('LiveFspClient.getCivilTwilight not yet implemented — Phase 1')
+
+  // ── Civil twilight ──────────────────────────────────────────────────────
+
+  async getCivilTwilight(locationId: string, date: string): Promise<FspCivilTwilight> {
+    const data = await this.get<{ civilTwilight: RawTwilight }>(
+      `/locations/${locationId}/civil-twilight`,
+      { date },
+    )
+    return normaliseTwilight(locationId, data.civilTwilight)
   }
-  getTrainingProgress(_studentId: string): Promise<FspTrainingProgress | null> {
-    throw new Error('LiveFspClient.getTrainingProgress not yet implemented — Phase 1')
+
+  // ── Training progress ───────────────────────────────────────────────────
+
+  async getTrainingProgress(studentId: string): Promise<FspTrainingProgress | null> {
+    try {
+      const data = await this.get<{ trainingProgress: RawProgress }>(
+        `/students/${studentId}/training-progress`,
+      )
+      return normaliseProgress(this.config.operatorId, studentId, data.trainingProgress)
+    } catch (e) {
+      if (isNotFound(e)) return null
+      throw e
+    }
   }
-  validateReservation(_params: FspReservationCreateParams): Promise<FspValidationResult> {
-    throw new Error('LiveFspClient.validateReservation not yet implemented — Phase 1')
+
+  // ── Mutations ───────────────────────────────────────────────────────────
+
+  async validateReservation(params: FspReservationCreateParams): Promise<FspValidationResult> {
+    const data = await this.post<{ valid: boolean; errors: string[] }>(
+      '/reservations/validate',
+      serialiseCreateParams(params),
+    )
+    return { valid: data.valid, errors: data.errors ?? [] }
   }
-  createReservation(
-    _params: FspReservationCreateParams,
-    _idempotencyKey: string,
+
+  async createReservation(
+    params: FspReservationCreateParams,
+    idempotencyKey: string,
   ): Promise<FspReservation> {
-    throw new Error('LiveFspClient.createReservation not yet implemented — Phase 1')
+    const data = await this.post<{ reservation: RawReservation }>(
+      '/reservations',
+      serialiseCreateParams(params),
+      idempotencyKey,
+    )
+    return normaliseReservation(this.config.operatorId)(data.reservation)
   }
-  createBatchReservations(
-    _params: FspReservationCreateParams[],
-    _idempotencyKey: string,
+
+  async createBatchReservations(
+    params: FspReservationCreateParams[],
+    idempotencyKey: string,
   ): Promise<FspReservation[]> {
-    throw new Error('LiveFspClient.createBatchReservations not yet implemented — Phase 1')
+    const data = await this.post<{ reservations: RawReservation[] }>(
+      '/reservations/batch',
+      { reservations: params.map(serialiseCreateParams) },
+      idempotencyKey,
+    )
+    return data.reservations.map(normaliseReservation(this.config.operatorId))
   }
+}
+
+// ── Raw FSP wire shapes ───────────────────────────────────────────────────────
+
+interface RawStudent {
+  id: string
+  firstName: string
+  lastName: string
+  email: string
+  phone?: string
+  totalFlightHours: number
+  lastFlightDate?: string
+  nextScheduledFlightDate?: string
+}
+
+interface RawInstructor {
+  id: string
+  firstName: string
+  lastName: string
+  ratings: string[]
+  qualifiedAircraftTypes: string[]
+}
+
+interface RawAircraft {
+  id: string
+  tailNumber: string
+  aircraftType: string
+  category: string
+}
+
+interface RawLocation {
+  id: string
+  name: string
+  icao: string
+  timezone: string
+}
+
+interface RawReservation {
+  id: string
+  studentId: string
+  instructorId: string
+  aircraftId: string
+  locationId: string
+  startTime: string
+  endTime: string
+  lessonType: string
+  status: string
+}
+
+interface RawSlot {
+  startTime: string
+  endTime: string
+  instructorId: string
+  aircraftId: string
+  locationId: string
+}
+
+interface RawTwilight {
+  civilSunrise: string
+  civilSunset: string
+}
+
+interface RawProgress {
+  currentStage: string
+  nextRequiredLesson: string
+  completedLessons: string[]
+  hoursRequired: number
+  hoursFlown: number
+}
+
+// ── Normalisers ───────────────────────────────────────────────────────────────
+
+function normaliseStudent(operatorId: string) {
+  return (r: RawStudent): FspStudent => ({
+    studentId: r.id,
+    operatorId,
+    firstName: r.firstName,
+    lastName: r.lastName,
+    email: r.email,
+    phone: r.phone,
+    totalFlightHours: r.totalFlightHours,
+    lastFlightDate: r.lastFlightDate ? new Date(r.lastFlightDate) : undefined,
+    nextScheduledFlightDate: r.nextScheduledFlightDate
+      ? new Date(r.nextScheduledFlightDate)
+      : undefined,
+  })
+}
+
+function normaliseInstructor(operatorId: string) {
+  return (r: RawInstructor): FspInstructor => ({
+    instructorId: r.id,
+    operatorId,
+    firstName: r.firstName,
+    lastName: r.lastName,
+    ratings: r.ratings,
+    qualifiedAircraftTypes: r.qualifiedAircraftTypes,
+  })
+}
+
+function normaliseAircraft(operatorId: string) {
+  return (r: RawAircraft): FspAircraft => ({
+    aircraftId: r.id,
+    operatorId,
+    tailNumber: r.tailNumber,
+    aircraftType: r.aircraftType,
+    category: r.category,
+  })
+}
+
+function normaliseLocation(operatorId: string) {
+  return (r: RawLocation): FspLocation => ({
+    locationId: r.id,
+    operatorId,
+    name: r.name,
+    icao: r.icao,
+    timezone: r.timezone,
+  })
+}
+
+function normaliseReservation(operatorId: string) {
+  return (r: RawReservation): FspReservation => ({
+    reservationId: r.id,
+    operatorId,
+    studentId: r.studentId,
+    instructorId: r.instructorId,
+    aircraftId: r.aircraftId,
+    locationId: r.locationId,
+    startTime: new Date(r.startTime),
+    endTime: new Date(r.endTime),
+    lessonType: r.lessonType,
+    status: r.status as FspReservation['status'],
+  })
+}
+
+function normaliseSlot(r: RawSlot): FspAvailabilitySlot {
+  return {
+    startTime: new Date(r.startTime),
+    endTime: new Date(r.endTime),
+    instructorId: r.instructorId,
+    aircraftId: r.aircraftId,
+    locationId: r.locationId,
+  }
+}
+
+function normaliseTwilight(locationId: string, r: RawTwilight): FspCivilTwilight {
+  return {
+    date: r.civilSunrise.substring(0, 10),
+    locationId,
+    civilSunrise: new Date(r.civilSunrise),
+    civilSunset: new Date(r.civilSunset),
+  }
+}
+
+function normaliseProgress(
+  operatorId: string,
+  studentId: string,
+  r: RawProgress,
+): FspTrainingProgress {
+  return {
+    studentId,
+    operatorId,
+    currentStage: r.currentStage,
+    nextRequiredLesson: r.nextRequiredLesson,
+    completedLessons: r.completedLessons,
+    hoursRequired: r.hoursRequired,
+    hoursFlown: r.hoursFlown,
+  }
+}
+
+function serialiseCreateParams(p: FspReservationCreateParams) {
+  return {
+    studentId: p.studentId,
+    instructorId: p.instructorId,
+    aircraftId: p.aircraftId,
+    locationId: p.locationId,
+    startTime: p.startTime.toISOString(),
+    endTime: p.endTime.toISOString(),
+    lessonType: p.lessonType,
+  }
+}
+
+function isNotFound(e: unknown): boolean {
+  return (
+    typeof e === 'object' &&
+    e !== null &&
+    'status' in e &&
+    (e as { status: number }).status === 404
+  )
 }
