@@ -33,6 +33,12 @@ export async function tenantHook(request: FastifyRequest, reply: FastifyReply) {
   if (request.routeOptions?.config?.skipAuth) return
 
   try {
+    // EventSource (SSE) cannot set Authorization headers — accept ?token= as fallback.
+    // The token is verified with the same secret; only the transport differs.
+    const queryToken = (request.query as { token?: string }).token
+    if (queryToken && !request.headers.authorization) {
+      request.headers.authorization = `Bearer ${queryToken}`
+    }
     await request.jwtVerify()
   } catch {
     return reply.unauthorized('Invalid or missing authentication token')

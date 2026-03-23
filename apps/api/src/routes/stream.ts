@@ -1,7 +1,7 @@
 /**
  * SSE (Server-Sent Events) stream endpoint for realtime queue updates.
  *
- * Operators subscribe to /api/v1/stream and receive push events when
+ * Operators subscribe to /api/v1/stream/queue and receive push events when
  * suggestions are created, approved, rejected, booked, or expired for
  * their tenant. This avoids polling from the operator console.
  *
@@ -9,6 +9,9 @@
  *  - SSE is unidirectional (server→client) which matches the use case
  *  - No library dependency — plain HTTP streaming
  *  - Azure Container Apps supports streaming responses natively
+ *
+ * EventSource cannot set custom headers, so the JWT is accepted as ?token=
+ * query param. The tenantHook handles this transparently.
  *
  * Each event is a JSON payload: { type, data }
  * The Redis pub/sub channel is 'oneshot:queue:{operatorId}'
@@ -18,7 +21,7 @@ import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
 import type { Redis } from 'ioredis'
 
 export async function streamRoutes(app: FastifyInstance) {
-  app.get('/queue', { websocket: false }, async (request: FastifyRequest, reply: FastifyReply) => {
+  app.get('/queue', async (request: FastifyRequest, reply: FastifyReply) => {
     const ctx = request.tenantContext
     if (!ctx) return reply.unauthorized()
 

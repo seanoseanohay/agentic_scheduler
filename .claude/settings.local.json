@@ -4,7 +4,8 @@
       "Bash(DATABASE_URL=postgresql://oneshot:oneshot@localhost:5434/oneshot_dev pnpm --filter @oneshot/persistence exec prisma migrate dev --name init)",
       "Bash(git init:*)",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(pnpm run:*)"
     ]
   }
 }

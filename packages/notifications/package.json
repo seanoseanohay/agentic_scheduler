@@ -22,7 +22,8 @@
   "dependencies": {
     "@oneshot/shared-types": "workspace:*",
     "@oneshot/observability": "workspace:*",
-    "@azure/communication-email": "^1.0.0"
+    "@azure/communication-email": "^1.0.0",
+    "@azure/communication-sms": "^1.1.0"
   },
   "devDependencies": {
     "@vitest/coverage-v8": "^2.0.5",

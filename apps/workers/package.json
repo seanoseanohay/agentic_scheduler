@@ -21,7 +21,8 @@
     "@oneshot/ranking": "workspace:*",
     "@oneshot/notifications": "workspace:*",
     "@oneshot/shared-types": "workspace:*",
-    "ioredis": "^5.4.1"
+    "ioredis": "^5.4.1",
+    "stripe": "^16.0.0"
   },
   "devDependencies": {
     "@types/node": "^22.5.0",
