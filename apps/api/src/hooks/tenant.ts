@@ -6,6 +6,9 @@
  * user-supplied query/body parameters — so a caller cannot impersonate another tenant.
  *
  * This is the enforcement point for constraints.md invariant #7.
+ *
+ * Routes may opt out of auth by setting { config: { skipAuth: true } } in their
+ * route definition (used for the public discovery intake endpoint).
  */
 
 import type { FastifyRequest, FastifyReply } from 'fastify'
@@ -16,12 +19,18 @@ declare module 'fastify' {
   interface FastifyRequest {
     tenantContext?: TenantContext
   }
+  interface FastifyContextConfig {
+    skipAuth?: boolean
+  }
 }
 
 const PUBLIC_PATHS = new Set(['/health', '/health/ready', '/health/live'])
 
 export async function tenantHook(request: FastifyRequest, reply: FastifyReply) {
   if (PUBLIC_PATHS.has(request.url)) return
+
+  // Route-level opt-out for public endpoints (e.g. discovery prospect intake POST)
+  if (request.routeOptions?.config?.skipAuth) return
 
   try {
     await request.jwtVerify()
