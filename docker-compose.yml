@@ -1,0 +1,46 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: oneshot-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: oneshot
+      POSTGRES_PASSWORD: oneshot
+      POSTGRES_DB: oneshot_dev
+    ports:
+      - '5434:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U oneshot -d oneshot_dev']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: oneshot-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    ports:
+      - '6381:6379'
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # Local mail catcher — intercepts outbound email in dev
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: oneshot-mailpit
+    restart: unless-stopped
+    ports:
+      - '1025:1025' # SMTP
+      - '8025:8025' # Web UI at http://localhost:8025
+
+volumes:
+  postgres_data:
+  redis_data:

@@ -1,0 +1,238 @@
+// OneShot — Prisma Schema
+//
+// Design rules:
+//   1. Every table that stores operational data carries operatorId (tenant isolation invariant).
+//   2. Audit records have no updatedAt — they are append-only.
+//   3. Suggestion status transitions must be reflected in updatedAt; history is the audit table.
+//   4. US data residency: target Azure PostgreSQL Flexible Server in eastus/eastus2.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Tenant ──────────────────────────────────────────────────────────────────
+
+model Tenant {
+  id         String   @id @default(cuid())
+  /// FSP operator identifier — canonical tenant isolation key
+  operatorId String   @unique
+  name       String
+  timezone   String   @default("America/Chicago")
+
+  // Ranking and workflow configuration (stored as JSON for flexible per-tenant tuning)
+  rankingWeights      Json
+  searchWindowDays    Int  @default(14)
+  continuityPreference String @default("preferred")
+  notificationPolicy  Json
+
+  active     Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  users           OperatorUser[]
+  workflowRuns    WorkflowRun[]
+  suggestions     Suggestion[]
+  auditEvents     AuditEvent[]
+  featureFlags    FeatureFlag[]
+  notifications   NotificationRecord[]
+  prospects       DiscoveryProspect[]
+
+  @@index([operatorId])
+  @@map("tenants")
+}
+
+// ─── Operator Users ───────────────────────────────────────────────────────────
+
+model OperatorUser {
+  id         String   @id @default(cuid())
+  tenantId   String
+  tenant     Tenant   @relation(fields: [tenantId], references: [id])
+  /// FSP user ID (used to correlate with FSP session)
+  fspUserId  String?
+  email      String
+  name       String
+  role       String   @default("scheduler") // scheduler | admin | viewer
+  active     Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([tenantId, email])
+  @@index([tenantId])
+  @@map("operator_users")
+}
+
+// ─── Workflow Runs ────────────────────────────────────────────────────────────
+
+model WorkflowRun {
+  id           String   @id @default(cuid())
+  tenantId     String
+  tenant       Tenant   @relation(fields: [tenantId], references: [id])
+  operatorId   String   // denormalised for fast tenant-scoped queries
+
+  workflowType String   // waitlist_fill | cancellation_recovery | discovery_flight | next_lesson
+  status       String   @default("running") // running | completed | failed | skipped
+  /// Deduplication key — format: "{workflowType}:{triggerEntityId}"
+  triggerKey   String
+  triggerPayload Json
+  suggestionsCreated Int @default(0)
+  errorMessage String?
+
+  startedAt    DateTime @default(now())
+  completedAt  DateTime?
+
+  suggestions  Suggestion[]
+
+  @@unique([tenantId, triggerKey])
+  @@index([tenantId, workflowType])
+  @@index([operatorId])
+  @@map("workflow_runs")
+}
+
+// ─── Suggestions ─────────────────────────────────────────────────────────────
+
+model Suggestion {
+  id           String   @id @default(cuid())
+  tenantId     String
+  tenant       Tenant   @relation(fields: [tenantId], references: [id])
+  operatorId   String   // denormalised for tenant-scoped queue queries
+
+  workflowRunId String?
+  workflowRun   WorkflowRun? @relation(fields: [workflowRunId], references: [id])
+
+  workflowType String
+  status       String   @default("pending") // pending | approved | rejected | expired | booked | failed
+
+  // FSP trigger context
+  triggerReservationId String?
+
+  // Candidate slot (what we're proposing to book)
+  studentId    String
+  instructorId String
+  aircraftId   String
+  locationId   String
+  startTime    DateTime
+  endTime      DateTime
+  lessonType   String
+
+  // Explanation for operator display
+  explanation  Json
+
+  // Ranking
+  score        Float    @default(0)
+
+  // Review
+  reviewedBy   String?
+  reviewedAt   DateTime?
+  reviewNotes  String?
+
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  notifications NotificationRecord[]
+
+  @@index([tenantId, status])
+  @@index([operatorId, status])
+  @@index([tenantId, workflowType, status])
+  @@map("suggestions")
+}
+
+// ─── Audit Events ─────────────────────────────────────────────────────────────
+// Immutable — no updatedAt, no delete cascade.
+
+model AuditEvent {
+  id         String   @id @default(cuid())
+  tenantId   String
+  tenant     Tenant   @relation(fields: [tenantId], references: [id])
+  operatorId String   // denormalised for tenant-scoped audit queries
+
+  eventType  String   // see AuditEventType in shared-types
+  actorId    String?
+  actorType  String   // system | operator | admin
+  entityType String
+  entityId   String
+  payload    Json
+
+  createdAt  DateTime @default(now())
+
+  @@index([tenantId, eventType])
+  @@index([operatorId, createdAt])
+  @@index([entityType, entityId])
+  @@map("audit_events")
+}
+
+// ─── Notification Records ─────────────────────────────────────────────────────
+
+model NotificationRecord {
+  id           String   @id @default(cuid())
+  tenantId     String
+  tenant       Tenant   @relation(fields: [tenantId], references: [id])
+  operatorId   String
+
+  suggestionId String?
+  suggestion   Suggestion? @relation(fields: [suggestionId], references: [id])
+
+  channel      String   // email | sms
+  recipient    String   // email address or phone number
+  templateKey  String
+  status       String   @default("pending") // pending | sent | failed | bounced
+  providerMessageId String?
+  errorMessage String?
+
+  sentAt       DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([tenantId, status])
+  @@index([operatorId, createdAt])
+  @@map("notification_records")
+}
+
+// ─── Feature Flags ────────────────────────────────────────────────────────────
+
+model FeatureFlag {
+  id         String   @id @default(cuid())
+  tenantId   String
+  tenant     Tenant   @relation(fields: [tenantId], references: [id])
+  flagKey    String
+  enabled    Boolean  @default(false)
+  metadata   Json?
+  updatedAt  DateTime @updatedAt
+
+  @@unique([tenantId, flagKey])
+  @@map("feature_flags")
+}
+
+// ─── Discovery Prospects ──────────────────────────────────────────────────────
+// Minimal — OneShot is not a CRM. Store only what is needed for the booking workflow.
+
+model DiscoveryProspect {
+  id         String   @id @default(cuid())
+  tenantId   String
+  tenant     Tenant   @relation(fields: [tenantId], references: [id])
+  operatorId String
+
+  firstName  String
+  lastName   String
+  email      String
+  phone      String?
+
+  requestedDate DateTime?
+  locationId    String?
+  status        String   @default("pending") // pending | offered | booked | cancelled
+
+  paymentIntentId String?
+  paymentStatus   String?
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([tenantId, status])
+  @@index([operatorId])
+  @@map("discovery_prospects")
+}

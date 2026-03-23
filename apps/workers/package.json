@@ -1,0 +1,33 @@
+{
+  "name": "@oneshot/workers",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc --project tsconfig.json",
+    "dev": "tsx watch src/index.ts",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "lint": "eslint src",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@oneshot/fsp-adapter": "workspace:*",
+    "@oneshot/observability": "workspace:*",
+    "@oneshot/persistence": "workspace:*",
+    "@oneshot/rules": "workspace:*",
+    "@oneshot/ranking": "workspace:*",
+    "@oneshot/notifications": "workspace:*",
+    "@oneshot/shared-types": "workspace:*",
+    "ioredis": "^5.4.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.5.0",
+    "@vitest/coverage-v8": "^2.0.5",
+    "tsx": "^4.17.0",
+    "typescript": "^5.5.4",
+    "vitest": "^2.0.5"
+  }
+}
