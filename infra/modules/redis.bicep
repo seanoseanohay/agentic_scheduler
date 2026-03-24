@@ -18,3 +18,4 @@ resource redis 'Microsoft.Cache/redis@2023-08-01' = {
 
 output host string = redis.properties.hostName
 output id string = redis.id
+output primaryKey string = listKeys(redis.id, '2023-08-01').primaryKey

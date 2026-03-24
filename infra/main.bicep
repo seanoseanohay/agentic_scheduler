@@ -114,11 +114,11 @@ module apps 'modules/apps.bicep' = {
     tags: tags
     registryServer: registry.outputs.loginServer
     registryUsername: registry.outputs.name
-    registryPassword: listCredentials(registry.outputs.id, '2023-07-01').passwords[0].value
+    registryPassword: registry.outputs.adminPassword
     imageTag: imageTag
     databaseUrl: 'postgresql://${postgresAdminUser}:${postgresAdminPassword}@${postgres.outputs.host}/oneshot?sslmode=require'
     jwtSecret: jwtSecret
-    redisUrl: 'rediss://:${listKeys(redis.outputs.id, '2023-08-01').primaryKey}@${redis.outputs.host}:6380'
+    redisUrl: 'rediss://:${redis.outputs.primaryKey}@${redis.outputs.host}:6380'
     fspMode: fspMode
     fspBaseUrl: fspBaseUrl
     fspApiKey: fspApiKey
