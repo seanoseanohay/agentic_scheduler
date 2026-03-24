@@ -12,7 +12,7 @@ FROM deps AS builder
 COPY . .
 # Disable Next.js telemetry during build
 ENV NEXT_TELEMETRY_DISABLED=1
-RUN pnpm --filter @oneshot/web build
+RUN pnpm --filter @oneshot/web... build
 
 FROM base AS runner
 ENV NODE_ENV=production
