@@ -38,7 +38,7 @@ export class SchedulePoller {
     for (const tenant of tenants) {
       // Stagger tenant polls by 500ms to avoid thundering herd on startup
       const delay = this.timers.length * 500
-      const timer = setTimeout(() => this.pollTenant(tenant), delay)
+      const timer = setTimeout(() => { void this.pollTenant(tenant) }, delay)
       this.timers.push(timer)
     }
   }
@@ -99,7 +99,7 @@ export class SchedulePoller {
       log.error({ err }, 'Tenant poll failed')
     } finally {
       // Always reschedule — errors in one cycle don't stop future polls
-      const timer = setTimeout(() => this.pollTenant(tenant), POLL_INTERVAL_MS)
+      const timer = setTimeout(() => { void this.pollTenant(tenant) }, POLL_INTERVAL_MS)
       this.timers.push(timer)
     }
   }

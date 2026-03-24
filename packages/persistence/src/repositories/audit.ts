@@ -19,7 +19,7 @@ export async function writeAuditEvent(
       actorType: event.actorType,
       entityType: event.entityType,
       entityId: event.entityId,
-      payload: event.payload as unknown as import('@prisma/client').Prisma.InputJsonValue,
+      payload: event.payload as import('@prisma/client').Prisma.InputJsonValue,
     },
   })
 }

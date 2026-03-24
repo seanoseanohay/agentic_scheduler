@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/require-await */
 /**
  * MockFspClient — deterministic test double for all FSP operations.
  *

@@ -20,7 +20,8 @@ export function useQueueUpdates(
   token: string | null,
   onUpdate: (event: QueueEvent) => void,
 ) {
-  const stableOnUpdate = useCallback(onUpdate, []) // eslint-disable-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: onUpdate is stabilised once on mount
+  const stableOnUpdate = useCallback(onUpdate, [])
 
   useEffect(() => {
     if (!token) return

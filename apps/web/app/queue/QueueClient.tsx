@@ -45,14 +45,14 @@ export function QueueClient({ operatorId, apiUrl }: QueueClientProps) {
   // Initial fetch + refetch on filter change
   useEffect(() => {
     setLoading(true)
-    fetchSuggestions()
+    void fetchSuggestions()
   }, [fetchSuggestions])
 
   // SSE live updates — flash indicator and refresh queue on any queue event
   useQueueUpdates(apiUrl, buildDevToken(operatorId), () => {
     setLiveIndicator(true)
     setTimeout(() => setLiveIndicator(false), 2000)
-    fetchSuggestions()
+    void fetchSuggestions()
   })
 
   const handleApprove = (id: string) => {

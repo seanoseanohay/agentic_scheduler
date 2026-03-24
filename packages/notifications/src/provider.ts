@@ -28,6 +28,7 @@ export interface INotificationProvider {
 
 /** Console provider — used in local development and tests */
 export class ConsoleNotificationProvider implements INotificationProvider {
+  // eslint-disable-next-line @typescript-eslint/require-await
   async send(message: NotificationMessage): Promise<NotificationResult> {
     const prefix = `[NOTIFICATION][${message.channel.toUpperCase()}]`
     process.stdout.write(

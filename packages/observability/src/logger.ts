@@ -8,7 +8,7 @@
  * are filterable per tenant without cross-tenant data leakage.
  */
 
-import pino from 'pino'
+import pino, { type DestinationStream } from 'pino'
 
 const isDev = process.env['NODE_ENV'] !== 'production'
 
@@ -38,12 +38,12 @@ export const logger = pino(
       res: pino.stdSerializers.res,
     },
   },
-  isDev
+  (isDev
     ? pino.transport({
         target: 'pino-pretty',
         options: { colorize: true, translateTime: 'SYS:standard', ignore: 'pid,hostname' },
       })
-    : undefined,
+    : undefined) as DestinationStream | undefined,
 )
 
 /** Creates a child logger pre-bound with tenant context */

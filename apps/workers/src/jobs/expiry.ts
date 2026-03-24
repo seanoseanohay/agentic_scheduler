@@ -15,7 +15,7 @@ export class ExpiryJob {
 
   start() {
     logger.info('Expiry job starting')
-    this.timer = setInterval(() => this.run(), EXPIRY_INTERVAL_MS)
+    this.timer = setInterval(() => { void this.run() }, EXPIRY_INTERVAL_MS)
     // Also run immediately on startup
     this.run().catch((err) => logger.error({ err }, 'Initial expiry run failed'))
   }
