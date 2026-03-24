@@ -15,6 +15,7 @@ RUN pnpm install --frozen-lockfile
 
 FROM deps AS builder
 COPY . .
+RUN pnpm --filter @oneshot/persistence exec prisma generate
 RUN pnpm --filter @oneshot/api... build
 
 FROM base AS runner
