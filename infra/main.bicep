@@ -1,5 +1,5 @@
 // OneShot — Azure Infrastructure
-// Deploys: Container Apps environment, PostgreSQL, Redis, Key Vault, App Insights
+// Deploys: Container Registry, Container Apps environment, PostgreSQL, Redis, Key Vault, App Insights
 //
 // Usage:
 //   az deployment group create \
@@ -20,6 +20,32 @@ param postgresAdminUser string = 'oneshotadmin'
 @description('PostgreSQL admin password — store in Key Vault, do not commit')
 param postgresAdminPassword string
 
+@description('Docker image tag to deploy')
+param imageTag string = 'latest'
+
+// ── App secrets (injected by CD pipeline from GitHub secrets) ─────────────────
+@secure()
+param jwtSecret string
+
+@secure()
+param nextauthSecret string
+
+param azureAdClientId string = ''
+
+@secure()
+param azureAdClientSecret string = ''
+
+param azureAdTenantId string = ''
+
+param fspMode string = 'live'
+param fspBaseUrl string = 'https://api.flightschedulepro.com'
+
+@secure()
+param fspApiKey string = ''
+
+@secure()
+param acsConnectionString string = ''
+
 var prefix = 'oneshot-${environmentName}'
 var tags = {
   project: 'oneshot'
@@ -37,8 +63,18 @@ module kv 'modules/keyvault.bicep' = {
   }
 }
 
+// ── Container Registry ────────────────────────────────────────────────────────
+module registry 'modules/registry.bicep' = {
+  name: 'registry'
+  params: {
+    name: '${prefix}-acr'
+    location: location
+    tags: tags
+  }
+}
+
 // ── Container Apps Environment ────────────────────────────────────────────────
-module containerApps 'modules/container-apps.bicep' = {
+module containerAppsEnv 'modules/container-apps.bicep' = {
   name: 'container-apps'
   params: {
     name: '${prefix}-env'
@@ -69,8 +105,38 @@ module redis 'modules/redis.bicep' = {
   }
 }
 
+// ── Container Apps (api, workers, web) ────────────────────────────────────────
+module apps 'modules/apps.bicep' = {
+  name: 'apps'
+  params: {
+    environmentId: containerAppsEnv.outputs.environmentId
+    location: location
+    tags: tags
+    registryServer: registry.outputs.loginServer
+    registryUsername: registry.outputs.name
+    registryPassword: listCredentials(registry.outputs.id, '2023-07-01').passwords[0].value
+    imageTag: imageTag
+    databaseUrl: 'postgresql://${postgresAdminUser}:${postgresAdminPassword}@${postgres.outputs.host}/oneshot?sslmode=require'
+    jwtSecret: jwtSecret
+    redisUrl: 'rediss://:${listKeys(redis.outputs.id, '2023-08-01').primaryKey}@${redis.outputs.host}:6380'
+    fspMode: fspMode
+    fspBaseUrl: fspBaseUrl
+    fspApiKey: fspApiKey
+    acsConnectionString: acsConnectionString
+    nextPublicApiUrl: 'https://${prefix}-api.${location}.azurecontainerapps.io'
+    nextauthSecret: nextauthSecret
+    nextauthUrl: 'https://${prefix}-web.${location}.azurecontainerapps.io'
+    azureAdClientId: azureAdClientId
+    azureAdClientSecret: azureAdClientSecret
+    azureAdTenantId: azureAdTenantId
+  }
+}
+
 // ── Outputs ───────────────────────────────────────────────────────────────────
-output containerAppsEnvironmentId string = containerApps.outputs.environmentId
+output containerAppsEnvironmentId string = containerAppsEnv.outputs.environmentId
+output registryLoginServer string = registry.outputs.loginServer
 output postgresHost string = postgres.outputs.host
 output redisHost string = redis.outputs.host
 output keyVaultUri string = kv.outputs.uri
+output apiUrl string = apps.outputs.apiUrl
+output webUrl string = apps.outputs.webUrl
