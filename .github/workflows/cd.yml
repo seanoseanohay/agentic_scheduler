@@ -102,12 +102,10 @@ jobs:
           failOnStdErr: false
 
       - name: Run DB migrations
-        uses: azure/container-apps-deploy-action@v1
-        with:
-          resourceGroup: rg-oneshot-${{ github.event.inputs.environment || 'pilot' }}
-          containerAppName: oneshot-api
-          # One-shot migration job runs prisma migrate deploy on startup via the API entrypoint
-          # (handled by apps/api/src/index.ts → prisma.$executeRaw on first connection)
+        # API runs `prisma migrate deploy` on startup — just wait for it to be healthy
+        run: |
+          echo "Waiting for API to start and run migrations..."
+          sleep 30
 
       - name: Smoke test
         run: |
