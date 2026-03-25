@@ -11,8 +11,8 @@ resource kv 'Microsoft.KeyVault/vaults@2023-07-01' = {
     tenantId: subscription().tenantId
     enableRbacAuthorization: true
     enableSoftDelete: true
-    softDeleteRetentionInDays: 90
-    enablePurgeProtection: true
+    softDeleteRetentionInDays: 7  // minimum; enables fast cleanup in pilot
+    enablePurgeProtection: false  // allow purge in non-prod; re-enable for prod
     publicNetworkAccess: 'Enabled' // Phase 1+: restrict to VNet
   }
 }

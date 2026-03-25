@@ -47,6 +47,8 @@ param fspApiKey string = ''
 param acsConnectionString string = ''
 
 var prefix = 'oneshot-${environmentName}'
+// KV names are globally unique and soft-delete prevents reuse; use a stable short suffix
+var kvUniqueSuffix = substring(uniqueString(subscription().id, environmentName), 0, 6)
 var tags = {
   project: 'oneshot'
   environment: environmentName
@@ -57,7 +59,7 @@ var tags = {
 module kv 'modules/keyvault.bicep' = {
   name: 'keyvault'
   params: {
-    name: '${prefix}-kv'
+    name: '${prefix}-${kvUniqueSuffix}-kv'
     location: location
     tags: tags
   }
