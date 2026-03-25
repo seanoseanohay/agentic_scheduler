@@ -18,10 +18,13 @@ FROM deps AS builder
 COPY . .
 RUN pnpm --filter @oneshot/persistence exec prisma generate
 RUN pnpm --filter @oneshot/workers... build
+RUN pnpm --filter @oneshot/workers --prod deploy /tmp/deploy
 
-FROM base AS runner
+FROM node:20-alpine AS runner
 ENV NODE_ENV=production
+WORKDIR /app
+RUN corepack enable
+COPY --from=builder /tmp/deploy/node_modules ./node_modules
 COPY --from=builder /app/apps/workers/dist ./apps/workers/dist
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/packages ./packages
+COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 CMD ["node", "apps/workers/dist/index.js"]

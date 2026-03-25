@@ -1,14 +1,15 @@
 import { buildServer } from './server.js'
 import { logger } from '@oneshot/observability'
 import { execSync } from 'node:child_process'
-import { resolve } from 'node:path'
+import { resolve, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const PORT = Number(process.env['API_PORT'] ?? 3001)
 const HOST = process.env['API_HOST'] ?? '0.0.0.0'
 
-// In the Docker image the monorepo root is /app; prisma schema lives under packages/persistence.
-const REPO_ROOT = resolve(fileURLToPath(import.meta.url), '../../../../..')
+// In the Docker image the monorepo root is /app; dist is at apps/api/dist/index.js
+// dirname gives apps/api/dist, then ../../.. walks up to /app
+const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../../..')
 
 async function runMigrations() {
   if (process.env['RUN_MIGRATIONS'] !== 'true') return
