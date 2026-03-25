@@ -89,7 +89,7 @@ jobs:
           template: infra/main.bicep
           parameters: >
             environmentName=${{ github.event.inputs.environment || 'pilot' }}
-            location=westus2
+            location=centralus
             postgresAdminPassword=${{ secrets.POSTGRES_ADMIN_PASSWORD }}
             jwtSecret=${{ secrets.JWT_SECRET }}
             nextauthSecret=${{ secrets.NEXTAUTH_SECRET }}
