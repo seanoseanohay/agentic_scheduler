@@ -18,7 +18,7 @@ FROM deps AS builder
 COPY . .
 RUN pnpm --filter @oneshot/persistence exec prisma generate
 RUN pnpm --filter @oneshot/workers... build
-RUN pnpm --filter @oneshot/workers --prod deploy /tmp/deploy
+RUN pnpm --filter @oneshot/workers --prod deploy --legacy /tmp/deploy
 
 FROM node:20-alpine AS runner
 ENV NODE_ENV=production

@@ -18,7 +18,7 @@ COPY . .
 RUN pnpm --filter @oneshot/persistence exec prisma generate
 RUN pnpm --filter @oneshot/api... build
 # pnpm deploy creates a flat node_modules with workspace packages physically copied in
-RUN pnpm --filter @oneshot/api --prod deploy /tmp/deploy
+RUN pnpm --filter @oneshot/api --prod deploy --legacy /tmp/deploy
 
 FROM node:20-alpine AS runner
 ENV NODE_ENV=production
