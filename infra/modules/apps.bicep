@@ -66,7 +66,6 @@ resource apiApp 'Microsoft.App/containerApps@2024-03-01' = {
           resources: { cpu: json('0.5'), memory: '1Gi' }
           env: [
             { name: 'NODE_ENV', value: 'production' }
-            { name: 'RUN_MIGRATIONS', value: 'true' }
             { name: 'API_PORT', value: '3002' }
             { name: 'API_HOST', value: '0.0.0.0' }
             { name: 'DATABASE_URL', secretRef: 'database-url' }
