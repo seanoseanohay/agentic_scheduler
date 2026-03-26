@@ -17,19 +17,16 @@ FROM deps AS builder
 COPY . .
 RUN pnpm --filter @oneshot/persistence exec prisma generate
 RUN pnpm --filter @oneshot/api... build
-# pnpm deploy creates a flat node_modules with workspace packages physically copied in
-RUN pnpm --filter @oneshot/api --prod deploy --legacy /tmp/deploy
 
-FROM node:20-alpine AS runner
+FROM base AS runner
 ENV NODE_ENV=production
-WORKDIR /app
-RUN corepack enable
-# Use the flat node_modules from pnpm deploy (no broken pnpm symlinks)
-COPY --from=builder /tmp/deploy/node_modules ./node_modules
-# Keep dist at original path so REPO_ROOT (dirname + ../../..) resolves to /app
+# Copy pnpm virtual store (includes .prisma generated client + all deps)
+COPY --from=builder /app/node_modules ./node_modules
+# Copy compiled app
 COPY --from=builder /app/apps/api/dist ./apps/api/dist
-# Prisma files at expected path relative to REPO_ROOT
+# Copy workspace package sources (needed for pnpm symlink resolution)
+COPY --from=builder /app/packages ./packages
+# Prisma schema + migrations for migrate deploy at startup
 COPY --from=builder /app/packages/persistence/prisma ./packages/persistence/prisma
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 EXPOSE 3002
 CMD ["node", "apps/api/dist/index.js"]

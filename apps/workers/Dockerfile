@@ -18,13 +18,13 @@ FROM deps AS builder
 COPY . .
 RUN pnpm --filter @oneshot/persistence exec prisma generate
 RUN pnpm --filter @oneshot/workers... build
-RUN pnpm --filter @oneshot/workers --prod deploy --legacy /tmp/deploy
 
-FROM node:20-alpine AS runner
+FROM base AS runner
 ENV NODE_ENV=production
-WORKDIR /app
-RUN corepack enable
-COPY --from=builder /tmp/deploy/node_modules ./node_modules
+# Copy pnpm virtual store (includes .prisma generated client + all deps)
+COPY --from=builder /app/node_modules ./node_modules
+# Copy compiled app
 COPY --from=builder /app/apps/workers/dist ./apps/workers/dist
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+# Copy workspace package sources (needed for pnpm symlink resolution)
+COPY --from=builder /app/packages ./packages
 CMD ["node", "apps/workers/dist/index.js"]
