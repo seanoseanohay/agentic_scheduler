@@ -23,8 +23,10 @@ FROM base AS runner
 ENV NODE_ENV=production
 # Copy pnpm virtual store (includes .prisma generated client + all deps)
 COPY --from=builder /app/node_modules ./node_modules
+# Copy app-level node_modules (pnpm puts workspace symlinks here)
+COPY --from=builder /app/apps/workers/node_modules ./apps/workers/node_modules
 # Copy compiled app
 COPY --from=builder /app/apps/workers/dist ./apps/workers/dist
-# Copy workspace package sources (needed for pnpm symlink resolution)
+# Copy workspace package dist (symlink targets)
 COPY --from=builder /app/packages ./packages
 CMD ["node", "apps/workers/dist/index.js"]
