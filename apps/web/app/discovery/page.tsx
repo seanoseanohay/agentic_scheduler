@@ -1,15 +1,11 @@
 /**
  * Discovery Flight Intake Form — public-facing page.
- *
- * No authentication required. Accepts prospect contact info and preferred date,
- * POSTs to the public /api/v1/prospects endpoint.
- *
- * The operatorId is read from the URL query param so this page can be used
- * across multiple tenant schools via a branded link.
- *
- * e.g. /discovery?operator=demo-operator-alpha
+ * No authentication required.
  */
 
+import Box from '@mui/material/Box'
+import Container from '@mui/material/Container'
+import Typography from '@mui/material/Typography'
 import { DiscoveryForm } from './DiscoveryForm'
 
 interface PageProps {
@@ -22,17 +18,24 @@ export default async function DiscoveryPage({ searchParams }: PageProps) {
   const apiUrl = process.env['NEXT_PUBLIC_API_URL'] ?? 'http://localhost:3001'
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-sky-50 to-white">
-      <div className="mx-auto max-w-lg px-4 py-16">
-        <div className="mb-8 text-center">
-          <h1 className="text-3xl font-bold text-gray-900">Book a Discovery Flight</h1>
-          <p className="mt-3 text-gray-600">
-            Experience the freedom of flight. Fill out the form below and we will send you
-            available slots that meet FAA daylight requirements.
-          </p>
-        </div>
+    <Box
+      sx={{
+        minHeight: '100vh',
+        background: 'linear-gradient(160deg, #EFF6FF 0%, #F8FAFC 60%)',
+      }}
+    >
+      <Container maxWidth="sm" sx={{ py: 10 }}>
+        <Box sx={{ mb: 5, textAlign: 'center' }}>
+          <Typography variant="h3" fontWeight={800} color="text.primary" mb={1.5}>
+            Book a Discovery Flight
+          </Typography>
+          <Typography variant="body1" color="text.secondary" maxWidth={400} mx="auto">
+            Experience the freedom of flight. Fill out the form and we'll send you available
+            slots that meet FAA daylight requirements.
+          </Typography>
+        </Box>
         <DiscoveryForm operatorId={operatorId} apiUrl={apiUrl} />
-      </div>
-    </div>
+      </Container>
+    </Box>
   )
 }

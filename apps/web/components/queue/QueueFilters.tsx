@@ -1,6 +1,8 @@
 'use client'
 
 import type { WorkflowType } from '@oneshot/shared-types'
+import Chip from '@mui/material/Chip'
+import Stack from '@mui/material/Stack'
 
 interface QueueFiltersProps {
   workflowType: WorkflowType | ''
@@ -16,30 +18,22 @@ const WORKFLOW_LABELS: Record<WorkflowType, string> = {
 
 export function QueueFilters({ workflowType, onWorkflowTypeChange }: QueueFiltersProps) {
   return (
-    <div className="flex flex-wrap gap-2">
-      <button
+    <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+      <Chip
+        label="All"
         onClick={() => onWorkflowTypeChange('')}
-        className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-          workflowType === ''
-            ? 'bg-blue-600 text-white'
-            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-        }`}
-      >
-        All
-      </button>
+        color={workflowType === '' ? 'primary' : 'default'}
+        variant={workflowType === '' ? 'filled' : 'outlined'}
+      />
       {(Object.entries(WORKFLOW_LABELS) as [WorkflowType, string][]).map(([key, label]) => (
-        <button
+        <Chip
           key={key}
+          label={label}
           onClick={() => onWorkflowTypeChange(key)}
-          className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-            workflowType === key
-              ? 'bg-blue-600 text-white'
-              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-          }`}
-        >
-          {label}
-        </button>
+          color={workflowType === key ? 'primary' : 'default'}
+          variant={workflowType === key ? 'filled' : 'outlined'}
+        />
       ))}
-    </div>
+    </Stack>
   )
 }

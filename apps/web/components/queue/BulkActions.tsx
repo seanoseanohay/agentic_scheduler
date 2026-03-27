@@ -1,5 +1,11 @@
 'use client'
 
+import Box from '@mui/material/Box'
+import Button from '@mui/material/Button'
+import Checkbox from '@mui/material/Checkbox'
+import Typography from '@mui/material/Typography'
+import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline'
+
 interface BulkActionsProps {
   selected: string[]
   onSelectAll: () => void
@@ -19,34 +25,50 @@ export function BulkActions({
 }: BulkActionsProps) {
   if (totalVisible === 0) return null
 
+  const allSelected = selected.length === totalVisible && totalVisible > 0
+
   return (
-    <div className="flex items-center gap-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-2">
-      <input
-        type="checkbox"
-        checked={selected.length === totalVisible && totalVisible > 0}
-        onChange={selected.length === totalVisible ? onClearSelection : onSelectAll}
-        className="h-4 w-4 rounded border-gray-300 text-blue-600"
+    <Box
+      sx={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 1,
+        px: 2,
+        py: 1,
+        borderRadius: 2,
+        border: '1px solid',
+        borderColor: 'primary.light',
+        bgcolor: 'primary.50',
+        background: 'rgba(30, 64, 175, 0.04)',
+      }}
+    >
+      <Checkbox
+        size="small"
+        checked={allSelected}
+        indeterminate={selected.length > 0 && !allSelected}
+        onChange={allSelected ? onClearSelection : onSelectAll}
+        sx={{ p: 0.5 }}
       />
-      <span className="text-sm text-blue-700">
+      <Typography variant="body2" color="primary.main" fontWeight={500} sx={{ flexGrow: 1 }}>
         {selected.length > 0 ? `${selected.length} selected` : `${totalVisible} suggestions`}
-      </span>
+      </Typography>
       {selected.length > 0 && (
         <>
-          <button
+          <Button
+            size="small"
+            variant="contained"
+            color="success"
+            startIcon={<CheckCircleOutlineIcon />}
             onClick={onBulkApprove}
             disabled={loading}
-            className="ml-auto rounded-md bg-green-600 px-3 py-1 text-xs font-medium text-white hover:bg-green-700 disabled:opacity-50"
           >
-            {loading ? 'Approving...' : `Approve ${selected.length}`}
-          </button>
-          <button
-            onClick={onClearSelection}
-            className="text-xs text-blue-500 hover:underline"
-          >
+            {loading ? 'Approving…' : `Approve ${selected.length}`}
+          </Button>
+          <Button size="small" variant="text" onClick={onClearSelection} sx={{ color: 'text.secondary' }}>
             Clear
-          </button>
+          </Button>
         </>
       )}
-    </div>
+    </Box>
   )
 }

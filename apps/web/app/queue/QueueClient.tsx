@@ -7,10 +7,22 @@ import { QueueFilters } from '@/components/queue/QueueFilters'
 import { BulkActions } from '@/components/queue/BulkActions'
 import { useQueueUpdates } from '@/hooks/useQueueUpdates'
 
+import AppBar from '@mui/material/AppBar'
+import Box from '@mui/material/Box'
+import Checkbox from '@mui/material/Checkbox'
+import Chip from '@mui/material/Chip'
+import Container from '@mui/material/Container'
+import Skeleton from '@mui/material/Skeleton'
+import Stack from '@mui/material/Stack'
+import Toolbar from '@mui/material/Toolbar'
+import Typography from '@mui/material/Typography'
+import FlightTakeoffIcon from '@mui/icons-material/FlightTakeoff'
+import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord'
+import InboxIcon from '@mui/icons-material/Inbox'
+
 interface QueueClientProps {
   operatorId: string
   apiUrl: string
-  /** Pre-signed HS256 JWT from the server component — avoids exposing JWT_SECRET client-side. */
   token: string
 }
 
@@ -20,9 +32,8 @@ export function QueueClient({ operatorId, apiUrl, token }: QueueClientProps) {
   const [selected, setSelected] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
   const [bulkLoading, setBulkLoading] = useState(false)
-  const [liveIndicator, setLiveIndicator] = useState(false)
+  const [live, setLive] = useState(false)
 
-  // Build headers — token is a proper HS256 JWT signed server-side with JWT_SECRET
   const headers = {
     'Content-Type': 'application/json',
     Authorization: `Bearer ${token}`,
@@ -31,7 +42,6 @@ export function QueueClient({ operatorId, apiUrl, token }: QueueClientProps) {
   const fetchSuggestions = useCallback(async () => {
     const params = new URLSearchParams({ status: 'pending' })
     if (workflowType) params.set('workflowType', workflowType)
-
     try {
       const res = await fetch(`${apiUrl}/api/v1/suggestions?${params}`, { headers })
       if (!res.ok) return
@@ -43,16 +53,14 @@ export function QueueClient({ operatorId, apiUrl, token }: QueueClientProps) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [apiUrl, workflowType, operatorId])
 
-  // Initial fetch + refetch on filter change
   useEffect(() => {
     setLoading(true)
     void fetchSuggestions()
   }, [fetchSuggestions])
 
-  // SSE live updates — flash indicator and refresh queue on any queue event
   useQueueUpdates(apiUrl, token, () => {
-    setLiveIndicator(true)
-    setTimeout(() => setLiveIndicator(false), 2000)
+    setLive(true)
+    setTimeout(() => setLive(false), 2500)
     void fetchSuggestions()
   })
 
@@ -60,7 +68,6 @@ export function QueueClient({ operatorId, apiUrl, token }: QueueClientProps) {
     setSuggestions((prev) => prev.filter((s) => s.id !== id))
     setSelected((prev) => prev.filter((s) => s !== id))
   }
-
   const handleReject = (id: string) => {
     setSuggestions((prev) => prev.filter((s) => s.id !== id))
     setSelected((prev) => prev.filter((s) => s !== id))
@@ -85,60 +92,108 @@ export function QueueClient({ operatorId, apiUrl, token }: QueueClientProps) {
   const visibleIds = suggestions.map((s) => s.id)
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-8">
-      {/* Header */}
-      <div className="mb-6 flex items-start justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold text-gray-900">Approval Queue</h1>
-          <p className="mt-1 text-sm text-gray-500">Review and approve scheduling suggestions</p>
-        </div>
-        <div className="flex items-center gap-2">
-          {liveIndicator && (
-            <span className="animate-pulse rounded-full bg-green-400 px-2 py-0.5 text-xs text-white">
-              live
-            </span>
+    <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
+      {/* Top nav */}
+      <AppBar position="sticky" elevation={0}>
+        <Toolbar>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexGrow: 1 }}>
+            <Box
+              sx={{
+                width: 32,
+                height: 32,
+                borderRadius: 1.5,
+                bgcolor: 'primary.main',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <FlightTakeoffIcon sx={{ color: 'white', fontSize: 17 }} />
+            </Box>
+            <Typography variant="subtitle1" fontWeight={700} color="text.primary">
+              OneShot
+            </Typography>
+          </Box>
+          {live && (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              <FiberManualRecordIcon sx={{ fontSize: 10, color: 'success.main', animation: 'pulse 1s infinite' }} />
+              <Typography variant="caption" color="success.main" fontWeight={600}>
+                live
+              </Typography>
+            </Box>
           )}
-          <span className="rounded-full bg-blue-100 px-3 py-1 text-sm font-medium text-blue-700">
-            {suggestions.length} pending
-          </span>
-        </div>
-      </div>
+        </Toolbar>
+      </AppBar>
 
-      {/* Filters */}
-      <div className="mb-4">
-        <QueueFilters workflowType={workflowType} onWorkflowTypeChange={setWorkflowType} />
-      </div>
+      <Container maxWidth="md" sx={{ py: 4 }}>
+        {/* Page header */}
+        <Box sx={{ mb: 3, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Box>
+            <Typography variant="h5" fontWeight={700} color="text.primary">
+              Approval Queue
+            </Typography>
+            <Typography variant="body2" color="text.secondary" mt={0.25}>
+              Review and approve scheduling suggestions
+            </Typography>
+          </Box>
+          <Chip
+            label={loading ? '…' : `${suggestions.length} pending`}
+            color="primary"
+            variant="filled"
+            size="medium"
+            sx={{ fontWeight: 700, fontSize: '0.875rem', px: 0.5 }}
+          />
+        </Box>
 
-      {/* Bulk actions */}
-      <div className="mb-4">
-        <BulkActions
-          selected={selected}
-          onSelectAll={() => setSelected(visibleIds)}
-          onClearSelection={() => setSelected([])}
-          onBulkApprove={handleBulkApprove}
-          totalVisible={suggestions.length}
-          loading={bulkLoading}
-        />
-      </div>
+        {/* Filters */}
+        <Box sx={{ mb: 2 }}>
+          <QueueFilters workflowType={workflowType} onWorkflowTypeChange={setWorkflowType} />
+        </Box>
 
-      {/* Queue */}
-      {loading ? (
-        <div className="space-y-4">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="h-48 animate-pulse rounded-lg bg-gray-100" />
-          ))}
-        </div>
-      ) : suggestions.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-gray-300 bg-white p-12 text-center">
-          <p className="text-sm text-gray-500">No pending suggestions</p>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {suggestions.map((suggestion) => (
-            <div key={suggestion.id} className="flex gap-3">
-              <div className="pt-6">
-                <input
-                  type="checkbox"
+        {/* Bulk actions */}
+        <Box sx={{ mb: 2 }}>
+          <BulkActions
+            selected={selected}
+            onSelectAll={() => setSelected(visibleIds)}
+            onClearSelection={() => setSelected([])}
+            onBulkApprove={handleBulkApprove}
+            totalVisible={suggestions.length}
+            loading={bulkLoading}
+          />
+        </Box>
+
+        {/* Queue list */}
+        {loading ? (
+          <Stack spacing={2}>
+            {[1, 2, 3].map((i) => (
+              <Skeleton key={i} variant="rounded" height={220} />
+            ))}
+          </Stack>
+        ) : suggestions.length === 0 ? (
+          <Box
+            sx={{
+              textAlign: 'center',
+              py: 10,
+              borderRadius: 3,
+              border: '2px dashed',
+              borderColor: 'divider',
+              bgcolor: 'background.paper',
+            }}
+          >
+            <InboxIcon sx={{ fontSize: 40, color: 'text.disabled', mb: 1 }} />
+            <Typography variant="body1" color="text.secondary" fontWeight={500}>
+              No pending suggestions
+            </Typography>
+            <Typography variant="body2" color="text.disabled" mt={0.5}>
+              Workers will generate new suggestions automatically
+            </Typography>
+          </Box>
+        ) : (
+          <Stack spacing={2}>
+            {suggestions.map((suggestion) => (
+              <Box key={suggestion.id} sx={{ display: 'flex', gap: 1.5, alignItems: 'flex-start' }}>
+                <Checkbox
+                  size="small"
                   checked={selected.includes(suggestion.id)}
                   onChange={(e) =>
                     setSelected((prev) =>
@@ -147,23 +202,22 @@ export function QueueClient({ operatorId, apiUrl, token }: QueueClientProps) {
                         : prev.filter((id) => id !== suggestion.id),
                     )
                   }
-                  className="h-4 w-4 rounded border-gray-300 text-blue-600"
+                  sx={{ mt: 1.5, p: 0.5 }}
                 />
-              </div>
-              <div className="flex-1">
-                <SuggestionCard
-                  suggestion={suggestion}
-                  apiUrl={apiUrl}
-                  authHeaders={headers}
-                  onApproved={() => handleApprove(suggestion.id)}
-                  onRejected={() => handleReject(suggestion.id)}
-                />
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
+                <Box sx={{ flex: 1, minWidth: 0 }}>
+                  <SuggestionCard
+                    suggestion={suggestion}
+                    apiUrl={apiUrl}
+                    authHeaders={headers}
+                    onApproved={() => handleApprove(suggestion.id)}
+                    onRejected={() => handleReject(suggestion.id)}
+                  />
+                </Box>
+              </Box>
+            ))}
+          </Stack>
+        )}
+      </Container>
+    </Box>
   )
 }
-

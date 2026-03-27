@@ -1,3 +1,1 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/* MUI handles all global styles via CssBaseline — nothing needed here */

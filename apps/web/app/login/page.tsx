@@ -1,84 +1,110 @@
 import { signIn } from '@/auth'
+import Box from '@mui/material/Box'
+import Button from '@mui/material/Button'
+import Card from '@mui/material/Card'
+import CardContent from '@mui/material/CardContent'
+import Divider from '@mui/material/Divider'
+import TextField from '@mui/material/TextField'
+import Typography from '@mui/material/Typography'
+import FlightTakeoffIcon from '@mui/icons-material/FlightTakeoff'
 
 export default function LoginPage() {
   const azureClientId = process.env['AZURE_AD_CLIENT_ID'] ?? ''
   const showAzure = azureClientId && azureClientId !== 'placeholder'
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50">
-      <div className="w-full max-w-sm rounded-lg border border-gray-200 bg-white p-8 shadow-sm">
-        <h1 className="mb-2 text-2xl font-semibold text-gray-900">OneShot</h1>
-        <p className="mb-8 text-sm text-gray-500">Agentic scheduler for Flight Schedule Pro</p>
-
-        {/* Credentials login — always shown in pilot */}
-        <form
-          action={async (formData: FormData) => {
-            'use server'
-            await signIn('credentials', {
-              username: formData.get('username'),
-              password: formData.get('password'),
-              redirectTo: '/queue',
-            })
-          }}
-          className="space-y-4"
-        >
-          <div>
-            <label htmlFor="username" className="block text-sm font-medium text-gray-700">
-              Username
-            </label>
-            <input
-              id="username"
-              name="username"
-              type="text"
-              autoComplete="username"
-              required
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-            />
-          </div>
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-              Password
-            </label>
-            <input
-              id="password"
-              name="password"
-              type="password"
-              autoComplete="current-password"
-              required
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-            />
-          </div>
-          <button
-            type="submit"
-            className="w-full rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-          >
-            Sign in
-          </button>
-        </form>
-
-        {showAzure && (
-          <>
-            <div className="my-4 flex items-center">
-              <div className="flex-1 border-t border-gray-200" />
-              <span className="mx-3 text-xs text-gray-400">or</span>
-              <div className="flex-1 border-t border-gray-200" />
-            </div>
-            <form
-              action={async () => {
-                'use server'
-                await signIn('microsoft-entra-id', { redirectTo: '/queue' })
+    <Box
+      sx={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        bgcolor: 'background.default',
+        px: 2,
+      }}
+    >
+      <Card sx={{ width: '100%', maxWidth: 400 }}>
+        <CardContent sx={{ p: 4 }}>
+          {/* Logo */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1 }}>
+            <Box
+              sx={{
+                width: 38,
+                height: 38,
+                borderRadius: 2,
+                bgcolor: 'primary.main',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
               }}
             >
-              <button
-                type="submit"
-                className="w-full rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+              <FlightTakeoffIcon sx={{ color: 'white', fontSize: 20 }} />
+            </Box>
+            <Typography variant="h5" fontWeight={700} color="text.primary">
+              OneShot
+            </Typography>
+          </Box>
+          <Typography variant="body2" color="text.secondary" mb={3}>
+            Agentic scheduler for Flight Schedule Pro
+          </Typography>
+
+          {/* Credentials form */}
+          <form
+            action={async (formData: FormData) => {
+              'use server'
+              await signIn('credentials', {
+                username: formData.get('username'),
+                password: formData.get('password'),
+                redirectTo: '/queue',
+              })
+            }}
+          >
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <TextField
+                name="username"
+                label="Username"
+                type="text"
+                autoComplete="username"
+                required
+                fullWidth
+                size="medium"
+              />
+              <TextField
+                name="password"
+                label="Password"
+                type="password"
+                autoComplete="current-password"
+                required
+                fullWidth
+                size="medium"
+              />
+              <Button type="submit" variant="contained" size="large" fullWidth sx={{ mt: 0.5 }}>
+                Sign in
+              </Button>
+            </Box>
+          </form>
+
+          {showAzure && (
+            <>
+              <Divider sx={{ my: 3 }}>
+                <Typography variant="caption" color="text.secondary">
+                  or
+                </Typography>
+              </Divider>
+              <form
+                action={async () => {
+                  'use server'
+                  await signIn('microsoft-entra-id', { redirectTo: '/queue' })
+                }}
               >
-                Sign in with Microsoft
-              </button>
-            </form>
-          </>
-        )}
-      </div>
-    </div>
+                <Button type="submit" variant="outlined" fullWidth>
+                  Sign in with Microsoft
+                </Button>
+              </form>
+            </>
+          )}
+        </CardContent>
+      </Card>
+    </Box>
   )
 }

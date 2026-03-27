@@ -1,6 +1,16 @@
 'use client'
 
 import { useState } from 'react'
+import Alert from '@mui/material/Alert'
+import Box from '@mui/material/Box'
+import Button from '@mui/material/Button'
+import Card from '@mui/material/Card'
+import CardContent from '@mui/material/CardContent'
+import Grid from '@mui/material/Grid'
+import TextField from '@mui/material/TextField'
+import Typography from '@mui/material/Typography'
+import FlightTakeoffIcon from '@mui/icons-material/FlightTakeoff'
+import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline'
 
 interface DiscoveryFormProps {
   operatorId: string
@@ -19,11 +29,7 @@ type SubmitStatus = 'idle' | 'submitting' | 'success' | 'error'
 
 export function DiscoveryForm({ operatorId, apiUrl }: DiscoveryFormProps) {
   const [form, setForm] = useState<FormState>({
-    firstName: '',
-    lastName: '',
-    email: '',
-    phone: '',
-    requestedDate: '',
+    firstName: '', lastName: '', email: '', phone: '', requestedDate: '',
   })
   const [status, setStatus] = useState<SubmitStatus>('idle')
   const [errorMsg, setErrorMsg] = useState('')
@@ -38,10 +44,8 @@ export function DiscoveryForm({ operatorId, apiUrl }: DiscoveryFormProps) {
       setStatus('error')
       return
     }
-
     setStatus('submitting')
     setErrorMsg('')
-
     try {
       const res = await fetch(`${apiUrl}/api/v1/prospects`, {
         method: 'POST',
@@ -53,7 +57,6 @@ export function DiscoveryForm({ operatorId, apiUrl }: DiscoveryFormProps) {
           phone: form.phone || undefined,
         }),
       })
-
       if (res.ok) {
         setStatus('success')
       } else {
@@ -69,99 +72,77 @@ export function DiscoveryForm({ operatorId, apiUrl }: DiscoveryFormProps) {
 
   if (status === 'success') {
     return (
-      <div className="rounded-2xl bg-white p-8 shadow-sm ring-1 ring-gray-100 text-center">
-        <div className="mb-4 text-4xl">✈️</div>
-        <h2 className="mb-2 text-xl font-semibold text-gray-900">Request received!</h2>
-        <p className="text-gray-600">
-          Thank you, {form.firstName}. We will email you within 24 hours with available
-          discovery flight slots.
-        </p>
-      </div>
+      <Card>
+        <CardContent sx={{ p: 5, textAlign: 'center' }}>
+          <CheckCircleOutlineIcon sx={{ fontSize: 56, color: 'success.main', mb: 2 }} />
+          <Typography variant="h5" fontWeight={700} mb={1}>
+            Request received!
+          </Typography>
+          <Typography color="text.secondary">
+            Thank you, {form.firstName}. We will email you within 24 hours with available
+            discovery flight slots.
+          </Typography>
+        </CardContent>
+      </Card>
     )
   }
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="rounded-2xl bg-white p-8 shadow-sm ring-1 ring-gray-100 space-y-5"
-    >
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="mb-1 block text-sm font-medium text-gray-700">First name *</label>
-          <input
-            type="text"
-            required
-            value={form.firstName}
-            onChange={set('firstName')}
-            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
-          />
-        </div>
-        <div>
-          <label className="mb-1 block text-sm font-medium text-gray-700">Last name *</label>
-          <input
-            type="text"
-            required
-            value={form.lastName}
-            onChange={set('lastName')}
-            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
-          />
-        </div>
-      </div>
-
-      <div>
-        <label className="mb-1 block text-sm font-medium text-gray-700">Email *</label>
-        <input
-          type="email"
-          required
-          value={form.email}
-          onChange={set('email')}
-          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
-        />
-      </div>
-
-      <div>
-        <label className="mb-1 block text-sm font-medium text-gray-700">
-          Phone <span className="text-gray-400">(optional)</span>
-        </label>
-        <input
-          type="tel"
-          value={form.phone}
-          onChange={set('phone')}
-          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
-        />
-      </div>
-
-      <div>
-        <label className="mb-1 block text-sm font-medium text-gray-700">
-          Preferred date <span className="text-gray-400">(optional)</span>
-        </label>
-        <input
-          type="date"
-          value={form.requestedDate}
-          onChange={set('requestedDate')}
-          min={new Date().toISOString().substring(0, 10)}
-          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
-        />
-        <p className="mt-1 text-xs text-gray-400">
-          All flights are scheduled within FAA civil twilight hours.
-        </p>
-      </div>
-
-      {status === 'error' && (
-        <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{errorMsg}</p>
-      )}
-
-      <button
-        type="submit"
-        disabled={status === 'submitting'}
-        className="w-full rounded-lg bg-sky-600 px-4 py-3 text-sm font-semibold text-white hover:bg-sky-700 disabled:opacity-50 transition-colors"
-      >
-        {status === 'submitting' ? 'Sending...' : 'Request Discovery Flight'}
-      </button>
-
-      <p className="text-center text-xs text-gray-400">
-        Payment is collected only after you confirm your slot.
-      </p>
-    </form>
+    <Card>
+      <CardContent sx={{ p: 4 }}>
+        <Box component="form" onSubmit={handleSubmit}>
+          <Grid container spacing={2}>
+            <Grid item xs={6}>
+              <TextField label="First name" required fullWidth value={form.firstName} onChange={set('firstName')} size="medium" />
+            </Grid>
+            <Grid item xs={6}>
+              <TextField label="Last name" required fullWidth value={form.lastName} onChange={set('lastName')} size="medium" />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField label="Email" type="email" required fullWidth value={form.email} onChange={set('email')} size="medium" />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField label="Phone (optional)" type="tel" fullWidth value={form.phone} onChange={set('phone')} size="medium" />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                label="Preferred date (optional)"
+                type="date"
+                fullWidth
+                value={form.requestedDate}
+                onChange={set('requestedDate')}
+                inputProps={{ min: new Date().toISOString().substring(0, 10) }}
+                InputLabelProps={{ shrink: true }}
+                size="medium"
+                helperText="All flights are scheduled within FAA civil twilight hours."
+              />
+            </Grid>
+            {status === 'error' && (
+              <Grid item xs={12}>
+                <Alert severity="error">{errorMsg}</Alert>
+              </Grid>
+            )}
+            <Grid item xs={12}>
+              <Button
+                type="submit"
+                variant="contained"
+                size="large"
+                fullWidth
+                disabled={status === 'submitting'}
+                startIcon={<FlightTakeoffIcon />}
+                sx={{ mt: 0.5 }}
+              >
+                {status === 'submitting' ? 'Sending…' : 'Request Discovery Flight'}
+              </Button>
+            </Grid>
+            <Grid item xs={12}>
+              <Typography variant="caption" color="text.secondary" textAlign="center" display="block">
+                Payment is collected only after you confirm your slot.
+              </Typography>
+            </Grid>
+          </Grid>
+        </Box>
+      </CardContent>
+    </Card>
   )
 }
