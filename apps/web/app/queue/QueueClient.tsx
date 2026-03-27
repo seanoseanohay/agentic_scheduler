@@ -5,19 +5,16 @@ import type { Suggestion, WorkflowType } from '@oneshot/shared-types'
 import { SuggestionCard } from '@/components/queue/SuggestionCard'
 import { QueueFilters } from '@/components/queue/QueueFilters'
 import { BulkActions } from '@/components/queue/BulkActions'
+import { AppNav } from '@/components/AppNav'
 import { useQueueUpdates } from '@/hooks/useQueueUpdates'
 
-import AppBar from '@mui/material/AppBar'
 import Box from '@mui/material/Box'
 import Checkbox from '@mui/material/Checkbox'
 import Chip from '@mui/material/Chip'
 import Container from '@mui/material/Container'
 import Skeleton from '@mui/material/Skeleton'
 import Stack from '@mui/material/Stack'
-import Toolbar from '@mui/material/Toolbar'
 import Typography from '@mui/material/Typography'
-import FlightTakeoffIcon from '@mui/icons-material/FlightTakeoff'
-import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord'
 import InboxIcon from '@mui/icons-material/Inbox'
 
 interface QueueClientProps {
@@ -93,39 +90,7 @@ export function QueueClient({ operatorId, apiUrl, token }: QueueClientProps) {
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
-      {/* Top nav */}
-      <AppBar position="sticky" elevation={0}>
-        <Toolbar>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexGrow: 1 }}>
-            <Box
-              sx={{
-                width: 32,
-                height: 32,
-                borderRadius: 1.5,
-                bgcolor: 'primary.main',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <FlightTakeoffIcon sx={{ color: 'white', fontSize: 17 }} />
-            </Box>
-            <Typography variant="subtitle1" fontWeight={700} color="text.primary">
-              OneShot
-            </Typography>
-          </Box>
-          {live && (
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-              <FiberManualRecordIcon
-                sx={{ fontSize: 10, color: 'success.main', animation: 'pulse 1s infinite' }}
-              />
-              <Typography variant="caption" color="success.main" fontWeight={600}>
-                live
-              </Typography>
-            </Box>
-          )}
-        </Toolbar>
-      </AppBar>
+      <AppNav live={live} />
 
       <Container maxWidth="md" sx={{ py: 4 }}>
         {/* Page header */}
