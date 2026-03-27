@@ -77,6 +77,15 @@ export async function listPendingSuggestions(ctx: TenantContext): Promise<Sugges
   return listSuggestions(ctx, { status: 'pending' })
 }
 
+/**
+ * Update the status (and optional review metadata) of a suggestion.
+ *
+ * The `operatorId` from `ctx` is included in the Prisma `where` clause so
+ * that tenant isolation is enforced atomically at the database level. If the
+ * suggestion does not exist or belongs to a different operator Prisma throws
+ * `PrismaClientKnownRequestError` (code P2025 — record not found), which the
+ * caller should surface as a 404.
+ */
 export async function updateSuggestionStatus(
   ctx: TenantContext,
   id: string,
@@ -84,9 +93,6 @@ export async function updateSuggestionStatus(
   reviewedBy?: string,
   reviewNotes?: string,
 ): Promise<Suggestion> {
-  // Include operatorId in the where clause so the tenant isolation check is
-  // atomic with the write. Without this the update would succeed on a
-  // cross-tenant id before any post-hoc check could prevent it.
   const row = await prisma.suggestion.update({
     where: { id, operatorId: ctx.operatorId },
     data: {
