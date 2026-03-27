@@ -30,6 +30,12 @@ param azureAdClientId string
 param azureAdClientSecret string
 param azureAdTenantId string
 
+// ── Demo credentials (pilot phase) ────────────────────────────────────────────
+param demoUser string = 'admin'
+@secure()
+param demoPassword string
+param demoOperatorId string = 'demo-operator-alpha'
+
 // ── API Container App ─────────────────────────────────────────────────────────
 resource apiApp 'Microsoft.App/containerApps@2024-03-01' = {
   name: 'oneshot-api'
@@ -75,6 +81,7 @@ resource apiApp 'Microsoft.App/containerApps@2024-03-01' = {
             { name: 'FSP_BASE_URL', value: fspBaseUrl }
             { name: 'FSP_API_KEY', secretRef: 'fsp-api-key' }
             { name: 'ACS_CONNECTION_STRING', secretRef: 'acs-connection-string' }
+            { name: 'ALLOWED_ORIGINS', value: '${nextauthUrl},http://localhost:3000' }
           ]
         }
       ]
@@ -164,6 +171,8 @@ resource webApp 'Microsoft.App/containerApps@2024-03-01' = {
         { name: 'registry-password', value: registryPassword }
         { name: 'nextauth-secret', value: nextauthSecret }
         { name: 'azure-ad-client-secret', value: azureAdClientSecret }
+        { name: 'jwt-secret', value: jwtSecret }
+        { name: 'demo-password', value: demoPassword }
       ]
     }
     template: {
@@ -180,6 +189,10 @@ resource webApp 'Microsoft.App/containerApps@2024-03-01' = {
             { name: 'AZURE_AD_CLIENT_ID', value: azureAdClientId }
             { name: 'AZURE_AD_CLIENT_SECRET', secretRef: 'azure-ad-client-secret' }
             { name: 'AZURE_AD_TENANT_ID', value: azureAdTenantId }
+            { name: 'JWT_SECRET', secretRef: 'jwt-secret' }
+            { name: 'DEMO_USER', value: demoUser }
+            { name: 'DEMO_PASSWORD', secretRef: 'demo-password' }
+            { name: 'DEMO_OPERATOR_ID', value: demoOperatorId }
           ]
         }
       ]

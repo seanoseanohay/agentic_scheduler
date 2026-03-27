@@ -37,8 +37,14 @@ param azureAdClientSecret string = ''
 
 param azureAdTenantId string = ''
 
-param fspMode string = 'live'
+param fspMode string = 'mock'
 param fspBaseUrl string = 'https://api.flightschedulepro.com'
+
+// ── Demo credentials (pilot phase — replace with real IdP when Azure AD is wired) ─
+param demoUser string = 'admin'
+@secure()
+param demoPassword string = 'oneshot-demo-2026'
+param demoOperatorId string = 'demo-operator-alpha'
 
 @secure()
 param fspApiKey string = ''
@@ -125,12 +131,15 @@ module apps 'modules/apps.bicep' = {
     fspBaseUrl: fspBaseUrl
     fspApiKey: fspApiKey
     acsConnectionString: acsConnectionString
-    nextPublicApiUrl: 'https://${prefix}-api.${location}.azurecontainerapps.io'
+    nextPublicApiUrl: 'https://oneshot-api.${containerAppsEnv.outputs.defaultDomain}'
     nextauthSecret: nextauthSecret
-    nextauthUrl: 'https://${prefix}-web.${location}.azurecontainerapps.io'
+    nextauthUrl: 'https://oneshot-web.${containerAppsEnv.outputs.defaultDomain}'
     azureAdClientId: azureAdClientId
     azureAdClientSecret: azureAdClientSecret
     azureAdTenantId: azureAdTenantId
+    demoUser: demoUser
+    demoPassword: demoPassword
+    demoOperatorId: demoOperatorId
   }
 }
 
