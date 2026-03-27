@@ -1,4 +1,4 @@
-FROM node:20-slim AS base
+FROM mcr.microsoft.com/mirror/docker/library/node:20-slim AS base
 WORKDIR /app
 RUN apt-get update -y && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
 RUN corepack enable
