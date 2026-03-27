@@ -7,8 +7,13 @@ const nextConfig = {
   // Transpile internal workspace packages
   transpilePackages: ['@oneshot/shared-types'],
   experimental: {
-    // Server Actions enabled for form submissions
-    serverActions: { allowedOrigins: ['localhost:3000'] },
+    // Server Actions enabled for form submissions (production + local)
+    serverActions: {
+      allowedOrigins: [
+        'localhost:3000',
+        'oneshot-web.greenocean-2a0e4b84.centralus.azurecontainerapps.io',
+      ],
+    },
   },
 }
 
