@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/mirror/docker/library/node:20-alpine AS base
+FROM node:20-alpine AS base
 WORKDIR /app
 RUN corepack enable
 

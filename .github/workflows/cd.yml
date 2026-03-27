@@ -41,10 +41,14 @@ jobs:
           username: ${{ secrets.ACR_USERNAME }}
           password: ${{ secrets.ACR_PASSWORD }}
 
+      - name: Log in to Docker Hub (avoids anonymous pull rate limits)
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-        with:
-          driver: docker  # use local daemon — no Docker Hub pull needed
 
       - name: Build and push ${{ matrix.app }}
         uses: docker/build-push-action@v6
@@ -55,6 +59,8 @@ jobs:
           tags: |
             ${{ env.REGISTRY }}/oneshot-${{ matrix.app }}:${{ env.IMAGE_TAG }}
             ${{ env.REGISTRY }}/oneshot-${{ matrix.app }}:latest
+          cache-from: type=gha,scope=${{ matrix.app }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.app }}
 
   # ── Deploy infrastructure + apps ───────────────────────────────────────────
   deploy:
