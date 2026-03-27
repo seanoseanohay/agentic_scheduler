@@ -3,6 +3,8 @@ WORKDIR /app
 RUN corepack enable
 
 FROM base AS deps
+# Tell Prisma postinstall to download the OpenSSL 3.x engine for Alpine (musl)
+ENV PRISMA_CLI_BINARY_TARGETS=linux-musl-openssl-3.0.x
 COPY pnpm-workspace.yaml package.json pnpm-lock.yaml* ./
 COPY apps/workers/package.json ./apps/workers/
 COPY packages/shared-types/package.json ./packages/shared-types/
