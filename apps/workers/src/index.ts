@@ -27,8 +27,12 @@ async function main() {
     process.exit(0)
   }
 
-  process.on('SIGTERM', () => { void shutdown() })
-  process.on('SIGINT', () => { void shutdown() })
+  process.on('SIGTERM', () => {
+    void shutdown()
+  })
+  process.on('SIGINT', () => {
+    void shutdown()
+  })
 }
 
 await main()

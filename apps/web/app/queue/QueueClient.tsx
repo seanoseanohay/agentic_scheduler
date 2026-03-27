@@ -50,7 +50,7 @@ export function QueueClient({ operatorId, apiUrl, token }: QueueClientProps) {
     } finally {
       setLoading(false)
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [apiUrl, workflowType, operatorId])
 
   useEffect(() => {
@@ -116,7 +116,9 @@ export function QueueClient({ operatorId, apiUrl, token }: QueueClientProps) {
           </Box>
           {live && (
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-              <FiberManualRecordIcon sx={{ fontSize: 10, color: 'success.main', animation: 'pulse 1s infinite' }} />
+              <FiberManualRecordIcon
+                sx={{ fontSize: 10, color: 'success.main', animation: 'pulse 1s infinite' }}
+              />
               <Typography variant="caption" color="success.main" fontWeight={600}>
                 live
               </Typography>

@@ -74,7 +74,10 @@ export class BookingConsumer {
     if (result.success) {
       log.info({ fspReservationId: result.fspReservationId }, 'Booking job completed')
     } else {
-      log.warn({ error: result.error, validationErrors: result.validationErrors }, 'Booking job failed')
+      log.warn(
+        { error: result.error, validationErrors: result.validationErrors },
+        'Booking job failed',
+      )
     }
   }
 }

@@ -97,7 +97,9 @@ async function main() {
     },
   })
 
-  console.log(`Seeded tenants: ${alpha.name} (${alpha.operatorId}), ${bravo.name} (${bravo.operatorId})`)
+  console.log(
+    `Seeded tenants: ${alpha.name} (${alpha.operatorId}), ${bravo.name} (${bravo.operatorId})`,
+  )
 }
 
 main()

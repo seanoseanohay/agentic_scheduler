@@ -35,9 +35,7 @@ const listQuery = z.object({
   workflowType: z
     .enum(['waitlist_fill', 'cancellation_recovery', 'discovery_flight', 'next_lesson'])
     .optional(),
-  status: z
-    .enum(['pending', 'approved', 'rejected', 'expired', 'booked', 'failed'])
-    .optional(),
+  status: z.enum(['pending', 'approved', 'rejected', 'expired', 'booked', 'failed']).optional(),
   limit: z.coerce.number().min(1).max(200).optional(),
   offset: z.coerce.number().min(0).optional(),
 })

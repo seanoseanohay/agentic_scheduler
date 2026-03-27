@@ -90,7 +90,12 @@ export async function handleDiscoveryFlights(
         const daylightResult = evaluateDaylightConstraint(slot, twilight)
         const certResult = evaluateCertificationConstraint(instructor, ac, 'dual')
         const availResult = evaluateAvailabilityConstraint(
-          { startTime: slot.startTime, endTime: slot.endTime, instructorId: slot.instructorId, aircraftId: slot.aircraftId },
+          {
+            startTime: slot.startTime,
+            endTime: slot.endTime,
+            instructorId: slot.instructorId,
+            aircraftId: slot.aircraftId,
+          },
           availableSlots,
         )
         const report = buildConstraintReport([daylightResult, certResult, availResult])

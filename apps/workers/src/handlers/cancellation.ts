@@ -78,11 +78,7 @@ export async function handleCancellation(
       const ac = aircraftMap.get(slot.aircraftId)
       if (!instructor || !ac) continue
 
-      const certResult = evaluateCertificationConstraint(
-        instructor,
-        ac,
-        cancelled.lessonType,
-      )
+      const certResult = evaluateCertificationConstraint(instructor, ac, cancelled.lessonType)
       const availResult = evaluateAvailabilityConstraint(
         {
           startTime: slot.startTime,
@@ -106,7 +102,8 @@ export async function handleCancellation(
           endTime: slot.endTime,
           lessonType: cancelled.lessonType,
           continuityInstructor: slot.instructorId === cancelled.instructorId,
-          continuityAircraft: ac.aircraftType === (aircraftMap.get(cancelled.aircraftId)?.aircraftType ?? ''),
+          continuityAircraft:
+            ac.aircraftType === (aircraftMap.get(cancelled.aircraftId)?.aircraftType ?? ''),
           student,
         })
       }

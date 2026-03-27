@@ -112,12 +112,24 @@ describe('MockFspClient', () => {
   it('createBatchReservations returns one reservation per param', async () => {
     const params = [
       {
-        operatorId, studentId: 'stu-001', instructorId: 'ins-001', aircraftId: 'ac-001',
-        locationId: 'loc-001', startTime: new Date(), endTime: new Date(Date.now() + 2 * 3600_000), lessonType: 'dual',
+        operatorId,
+        studentId: 'stu-001',
+        instructorId: 'ins-001',
+        aircraftId: 'ac-001',
+        locationId: 'loc-001',
+        startTime: new Date(),
+        endTime: new Date(Date.now() + 2 * 3600_000),
+        lessonType: 'dual',
       },
       {
-        operatorId, studentId: 'stu-002', instructorId: 'ins-001', aircraftId: 'ac-001',
-        locationId: 'loc-001', startTime: new Date(), endTime: new Date(Date.now() + 2 * 3600_000), lessonType: 'dual',
+        operatorId,
+        studentId: 'stu-002',
+        instructorId: 'ins-001',
+        aircraftId: 'ac-001',
+        locationId: 'loc-001',
+        startTime: new Date(),
+        endTime: new Date(Date.now() + 2 * 3600_000),
+        lessonType: 'dual',
       },
     ]
     const results = await client.createBatchReservations(params, 'batch-idem-key')

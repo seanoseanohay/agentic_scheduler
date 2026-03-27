@@ -15,7 +15,9 @@ export class ExpiryJob {
 
   start() {
     logger.info('Expiry job starting')
-    this.timer = setInterval(() => { void this.run() }, EXPIRY_INTERVAL_MS)
+    this.timer = setInterval(() => {
+      void this.run()
+    }, EXPIRY_INTERVAL_MS)
     // Also run immediately on startup
     this.run().catch((err) => logger.error({ err }, 'Initial expiry run failed'))
   }
@@ -43,7 +45,9 @@ export class ExpiryJob {
             entityType: 'suggestion_batch',
             entityId: 'expiry_run',
             payload: { expiredCount: count, runAt: new Date().toISOString() },
-          }).catch((err) => logger.error({ err, operatorId: tenant.operatorId }, 'Audit write failed'))
+          }).catch((err) =>
+            logger.error({ err, operatorId: tenant.operatorId }, 'Audit write failed'),
+          )
         }
       }
     } catch (err) {

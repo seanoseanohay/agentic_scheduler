@@ -29,7 +29,11 @@ type SubmitStatus = 'idle' | 'submitting' | 'success' | 'error'
 
 export function DiscoveryForm({ operatorId, apiUrl }: DiscoveryFormProps) {
   const [form, setForm] = useState<FormState>({
-    firstName: '', lastName: '', email: '', phone: '', requestedDate: '',
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+    requestedDate: '',
   })
   const [status, setStatus] = useState<SubmitStatus>('idle')
   const [errorMsg, setErrorMsg] = useState('')
@@ -79,8 +83,8 @@ export function DiscoveryForm({ operatorId, apiUrl }: DiscoveryFormProps) {
             Request received!
           </Typography>
           <Typography color="text.secondary">
-            Thank you, {form.firstName}. We will email you within 24 hours with available
-            discovery flight slots.
+            Thank you, {form.firstName}. We will email you within 24 hours with available discovery
+            flight slots.
           </Typography>
         </CardContent>
       </Card>
@@ -93,16 +97,45 @@ export function DiscoveryForm({ operatorId, apiUrl }: DiscoveryFormProps) {
         <Box component="form" onSubmit={handleSubmit}>
           <Grid container spacing={2}>
             <Grid item xs={6}>
-              <TextField label="First name" required fullWidth value={form.firstName} onChange={set('firstName')} size="medium" />
+              <TextField
+                label="First name"
+                required
+                fullWidth
+                value={form.firstName}
+                onChange={set('firstName')}
+                size="medium"
+              />
             </Grid>
             <Grid item xs={6}>
-              <TextField label="Last name" required fullWidth value={form.lastName} onChange={set('lastName')} size="medium" />
+              <TextField
+                label="Last name"
+                required
+                fullWidth
+                value={form.lastName}
+                onChange={set('lastName')}
+                size="medium"
+              />
             </Grid>
             <Grid item xs={12}>
-              <TextField label="Email" type="email" required fullWidth value={form.email} onChange={set('email')} size="medium" />
+              <TextField
+                label="Email"
+                type="email"
+                required
+                fullWidth
+                value={form.email}
+                onChange={set('email')}
+                size="medium"
+              />
             </Grid>
             <Grid item xs={12}>
-              <TextField label="Phone (optional)" type="tel" fullWidth value={form.phone} onChange={set('phone')} size="medium" />
+              <TextField
+                label="Phone (optional)"
+                type="tel"
+                fullWidth
+                value={form.phone}
+                onChange={set('phone')}
+                size="medium"
+              />
             </Grid>
             <Grid item xs={12}>
               <TextField
@@ -136,7 +169,12 @@ export function DiscoveryForm({ operatorId, apiUrl }: DiscoveryFormProps) {
               </Button>
             </Grid>
             <Grid item xs={12}>
-              <Typography variant="caption" color="text.secondary" textAlign="center" display="block">
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                textAlign="center"
+                display="block"
+              >
                 Payment is collected only after you confirm your slot.
               </Typography>
             </Grid>

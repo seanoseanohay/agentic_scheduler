@@ -30,8 +30,8 @@ export default async function DiscoveryPage({ searchParams }: PageProps) {
             Book a Discovery Flight
           </Typography>
           <Typography variant="body1" color="text.secondary" maxWidth={400} mx="auto">
-            Experience the freedom of flight. Fill out the form and we'll send you available
-            slots that meet FAA daylight requirements.
+            Experience the freedom of flight. Fill out the form and we'll send you available slots
+            that meet FAA daylight requirements.
           </Typography>
         </Box>
         <DiscoveryForm operatorId={operatorId} apiUrl={apiUrl} />

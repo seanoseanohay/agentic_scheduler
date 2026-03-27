@@ -40,9 +40,7 @@ export function rankCandidates(
   weights: RankingWeights,
   now = new Date(),
 ): ScoredCandidate[] {
-  return candidates
-    .map((c) => score(c, weights, now))
-    .sort((a, b) => b.score - a.score)
+  return candidates.map((c) => score(c, weights, now)).sort((a, b) => b.score - a.score)
 }
 
 function score(c: RankingCandidate, w: RankingWeights, now: Date): ScoredCandidate {
@@ -65,8 +63,7 @@ function score(c: RankingCandidate, w: RankingWeights, now: Date): ScoredCandida
     total += w.timeUntilNextFlight
     reasons.push('No upcoming flight scheduled')
   } else {
-    const daysUntil =
-      (c.student.nextScheduledFlightDate.getTime() - now.getTime()) / MS_PER_DAY
+    const daysUntil = (c.student.nextScheduledFlightDate.getTime() - now.getTime()) / MS_PER_DAY
     const norm = Math.max(0, 1 - daysUntil / 14)
     total += norm * w.timeUntilNextFlight
   }

@@ -40,10 +40,7 @@ providers.push(
       password: { label: 'Password', type: 'password' },
     },
     authorize(credentials) {
-      if (
-        credentials?.username === DEMO_USER &&
-        credentials?.password === DEMO_PASSWORD
-      ) {
+      if (credentials?.username === DEMO_USER && credentials?.password === DEMO_PASSWORD) {
         return { id: DEMO_OPERATOR_ID, name: DEMO_USER, operatorId: DEMO_OPERATOR_ID }
       }
       return null

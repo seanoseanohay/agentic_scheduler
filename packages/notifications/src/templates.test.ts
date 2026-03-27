@@ -27,16 +27,21 @@ describe('renderTemplate', () => {
   it('renders discovery.offer with booking URL', () => {
     const result = renderTemplate(
       'discovery.offer',
-      { firstName: 'Carol', date: '2026-06-21', time: '09:00 AM', bookingUrl: 'https://example.com/book' },
+      {
+        firstName: 'Carol',
+        date: '2026-06-21',
+        time: '09:00 AM',
+        bookingUrl: 'https://example.com/book',
+      },
       'Horizon Air',
     )
     expect(result.body).toContain('https://example.com/book')
   })
 
   it('throws for unknown template key', () => {
-    expect(() =>
-      renderTemplate('unknown.template' as never, {}, 'Brand'),
-    ).toThrow('Unknown notification template')
+    expect(() => renderTemplate('unknown.template' as never, {}, 'Brand')).toThrow(
+      'Unknown notification template',
+    )
   })
 
   it('handles missing optional data fields gracefully', () => {

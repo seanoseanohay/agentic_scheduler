@@ -62,7 +62,10 @@ export async function skipWorkflowRun(runId: string): Promise<void> {
   })
 }
 
-function mapRun(row: Awaited<ReturnType<typeof prisma.workflowRun.findUniqueOrThrow>>, ctx: TenantContext): WorkflowRun {
+function mapRun(
+  row: Awaited<ReturnType<typeof prisma.workflowRun.findUniqueOrThrow>>,
+  ctx: TenantContext,
+): WorkflowRun {
   return {
     id: row.id,
     tenantContext: ctx,

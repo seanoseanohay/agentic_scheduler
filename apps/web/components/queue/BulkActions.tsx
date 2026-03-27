@@ -64,7 +64,12 @@ export function BulkActions({
           >
             {loading ? 'Approving…' : `Approve ${selected.length}`}
           </Button>
-          <Button size="small" variant="text" onClick={onClearSelection} sx={{ color: 'text.secondary' }}>
+          <Button
+            size="small"
+            variant="text"
+            onClick={onClearSelection}
+            sx={{ color: 'text.secondary' }}
+          >
             Clear
           </Button>
         </>

@@ -34,7 +34,7 @@ export async function streamRoutes(app: FastifyInstance) {
 
     // Subscribe to this tenant's channel on a dedicated Redis subscriber connection
     const channel = `oneshot:queue:${ctx.operatorId}`
-    const subscriber = (app.redis).duplicate()
+    const subscriber = app.redis.duplicate()
     await subscriber.subscribe(channel)
 
     const send = (type: string, data: unknown) => {

@@ -15,11 +15,14 @@ async function runMigrations() {
   if (process.env['RUN_MIGRATIONS'] !== 'true') return
   try {
     logger.info('Running DB migrations...')
-    execSync('node_modules/.bin/prisma migrate deploy --schema packages/persistence/prisma/schema.prisma', {
-      cwd: REPO_ROOT,
-      stdio: 'inherit',
-      env: { ...process.env },
-    })
+    execSync(
+      'node_modules/.bin/prisma migrate deploy --schema packages/persistence/prisma/schema.prisma',
+      {
+        cwd: REPO_ROOT,
+        stdio: 'inherit',
+        env: { ...process.env },
+      },
+    )
     logger.info('DB migrations complete')
   } catch (err) {
     logger.error(err, 'DB migration failed — aborting startup')

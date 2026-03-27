@@ -73,9 +73,7 @@ describe('rankCandidates', () => {
   })
 
   it('produces a score between 0 and 1', () => {
-    const candidates = [
-      makeCandidate({ continuityInstructor: true, continuityAircraft: true }),
-    ]
+    const candidates = [makeCandidate({ continuityInstructor: true, continuityAircraft: true })]
     const ranked = rankCandidates(candidates, DEFAULT_RANKING_WEIGHTS, now)
     expect(ranked[0]!.score).toBeGreaterThanOrEqual(0)
     expect(ranked[0]!.score).toBeLessThanOrEqual(1)

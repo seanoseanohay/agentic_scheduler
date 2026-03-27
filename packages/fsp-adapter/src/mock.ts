@@ -158,10 +158,7 @@ export class MockFspClient implements IFspClient {
     ]
   }
 
-  async getAvailableSlots(opts: {
-    start: Date
-    end: Date
-  }): Promise<FspAvailabilitySlot[]> {
+  async getAvailableSlots(opts: { start: Date; end: Date }): Promise<FspAvailabilitySlot[]> {
     const slots: FspAvailabilitySlot[] = []
     const cursor = new Date(opts.start)
     while (cursor < opts.end) {
@@ -225,8 +222,6 @@ export class MockFspClient implements IFspClient {
     params: FspReservationCreateParams[],
     idempotencyKey: string,
   ): Promise<FspReservation[]> {
-    return Promise.all(
-      params.map((p, i) => this.createReservation(p, `${idempotencyKey}-${i}`)),
-    )
+    return Promise.all(params.map((p, i) => this.createReservation(p, `${idempotencyKey}-${i}`)))
   }
 }

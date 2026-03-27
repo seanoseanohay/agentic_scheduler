@@ -397,9 +397,6 @@ function serialiseCreateParams(p: FspReservationCreateParams) {
 
 function isNotFound(e: unknown): boolean {
   return (
-    typeof e === 'object' &&
-    e !== null &&
-    'status' in e &&
-    (e as { status: number }).status === 404
+    typeof e === 'object' && e !== null && 'status' in e && (e as { status: number }).status === 404
   )
 }

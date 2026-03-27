@@ -23,11 +23,14 @@ interface SuggestionCardProps {
   onRejected?: () => void
 }
 
-const WORKFLOW_CONFIG: Record<string, { label: string; color: 'secondary' | 'warning' | 'info' | 'success' }> = {
-  waitlist_fill:        { label: 'Waitlist Fill',         color: 'secondary' },
-  cancellation_recovery:{ label: 'Cancellation Recovery', color: 'warning'   },
-  discovery_flight:     { label: 'Discovery Flight',      color: 'info'      },
-  next_lesson:          { label: 'Next Lesson',           color: 'success'   },
+const WORKFLOW_CONFIG: Record<
+  string,
+  { label: string; color: 'secondary' | 'warning' | 'info' | 'success' }
+> = {
+  waitlist_fill: { label: 'Waitlist Fill', color: 'secondary' },
+  cancellation_recovery: { label: 'Cancellation Recovery', color: 'warning' },
+  discovery_flight: { label: 'Discovery Flight', color: 'info' },
+  next_lesson: { label: 'Next Lesson', color: 'success' },
 }
 
 export function SuggestionCard({
@@ -37,7 +40,9 @@ export function SuggestionCard({
   onApproved,
   onRejected,
 }: SuggestionCardProps) {
-  const [actionState, setActionState] = useState<'idle' | 'loading' | 'approved' | 'rejected'>('idle')
+  const [actionState, setActionState] = useState<'idle' | 'loading' | 'approved' | 'rejected'>(
+    'idle',
+  )
 
   async function act(action: 'approve' | 'reject') {
     setActionState('loading')
@@ -57,10 +62,16 @@ export function SuggestionCard({
 
   const { candidate, explanation } = suggestion
   const startStr = new Date(candidate.startTime).toLocaleString(undefined, {
-    weekday: 'short', month: 'short', day: 'numeric',
-    hour: '2-digit', minute: '2-digit',
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
   })
-  const wf = WORKFLOW_CONFIG[suggestion.workflowType] ?? { label: suggestion.workflowType, color: 'default' as const }
+  const wf = WORKFLOW_CONFIG[suggestion.workflowType] ?? {
+    label: suggestion.workflowType,
+    color: 'default' as const,
+  }
   const expiresIn = Math.max(
     0,
     Math.round((new Date(suggestion.expiresAt).getTime() - Date.now()) / 3_600_000),
@@ -99,7 +110,15 @@ export function SuggestionCard({
       {actionState === 'loading' && <LinearProgress />}
       <CardContent sx={{ p: 3 }}>
         {/* Header row */}
-        <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 2, gap: 2 }}>
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'flex-start',
+            justifyContent: 'space-between',
+            mb: 2,
+            gap: 2,
+          }}
+        >
           <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 1 }}>
             <Chip label={wf.label} color={wf.color} size="small" />
             <Typography variant="subtitle2" color="text.primary">
@@ -122,8 +141,18 @@ export function SuggestionCard({
               </Typography>
             </Box>
             {expiresIn > 0 && (
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, justifyContent: 'flex-end', mt: 0.5 }}>
-                <AccessTimeIcon sx={{ fontSize: 12, color: urgent ? 'error.main' : 'text.disabled' }} />
+              <Box
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 0.5,
+                  justifyContent: 'flex-end',
+                  mt: 0.5,
+                }}
+              >
+                <AccessTimeIcon
+                  sx={{ fontSize: 12, color: urgent ? 'error.main' : 'text.disabled' }}
+                />
                 <Typography
                   variant="caption"
                   color={urgent ? 'error.main' : 'text.disabled'}
@@ -146,13 +175,15 @@ export function SuggestionCard({
           }}
         >
           {[
-            ['Student',    candidate.studentId],
+            ['Student', candidate.studentId],
             ['Instructor', candidate.instructorId],
-            ['Aircraft',   candidate.aircraftId],
-            ['Lesson',     candidate.lessonType],
+            ['Aircraft', candidate.aircraftId],
+            ['Lesson', candidate.lessonType],
           ].map(([label, value]) => (
             <Typography key={label} variant="body2" color="text.secondary">
-              <Box component="span" fontWeight={600} color="text.primary">{label}:</Box>{' '}
+              <Box component="span" fontWeight={600} color="text.primary">
+                {label}:
+              </Box>{' '}
               {value}
             </Typography>
           ))}
@@ -171,7 +202,13 @@ export function SuggestionCard({
         >
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 0.75 }}>
             <InfoOutlinedIcon sx={{ fontSize: 14, color: 'text.secondary' }} />
-            <Typography variant="caption" fontWeight={700} color="text.secondary" textTransform="uppercase" letterSpacing={0.5}>
+            <Typography
+              variant="caption"
+              fontWeight={700}
+              color="text.secondary"
+              textTransform="uppercase"
+              letterSpacing={0.5}
+            >
               Why this suggestion?
             </Typography>
           </Box>

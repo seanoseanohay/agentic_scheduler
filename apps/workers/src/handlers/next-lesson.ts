@@ -84,7 +84,12 @@ export async function handleNextLesson(
 
         const certResult = evaluateCertificationConstraint(instructor, ac, lessonType)
         const availResult = evaluateAvailabilityConstraint(
-          { startTime: slot.startTime, endTime: slot.endTime, instructorId: slot.instructorId, aircraftId: slot.aircraftId },
+          {
+            startTime: slot.startTime,
+            endTime: slot.endTime,
+            instructorId: slot.instructorId,
+            aircraftId: slot.aircraftId,
+          },
           availableSlots,
         )
         const report = buildConstraintReport([certResult, availResult])

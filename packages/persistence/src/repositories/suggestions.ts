@@ -4,7 +4,12 @@
  */
 
 import type { Suggestion as PrismaSuggestion, Prisma } from '@prisma/client'
-import type { Suggestion, SuggestionStatus, WorkflowType, TenantContext } from '@oneshot/shared-types'
+import type {
+  Suggestion,
+  SuggestionStatus,
+  WorkflowType,
+  TenantContext,
+} from '@oneshot/shared-types'
 import { prisma } from '../client.js'
 
 export async function createSuggestion(

@@ -63,7 +63,7 @@ export async function handleWaitlistFill(
   const aircraftMap = new Map(aircraft.map((a) => [a.aircraftId, a]))
 
   // Deduplicate open slots
-  const openSlots = new Map<string, typeof availableSlots[0]>()
+  const openSlots = new Map<string, (typeof availableSlots)[0]>()
   for (const slot of availableSlots) {
     const key = `${slot.instructorId}:${slot.aircraftId}:${slot.startTime.toISOString()}`
     if (!bookedTimes.has(key)) openSlots.set(key, slot)
@@ -96,7 +96,12 @@ export async function handleWaitlistFill(
       for (const student of students) {
         const certResult = evaluateCertificationConstraint(instructor, ac, 'dual')
         const availResult = evaluateAvailabilityConstraint(
-          { startTime: slot.startTime, endTime: slot.endTime, instructorId: slot.instructorId, aircraftId: slot.aircraftId },
+          {
+            startTime: slot.startTime,
+            endTime: slot.endTime,
+            instructorId: slot.instructorId,
+            aircraftId: slot.aircraftId,
+          },
           availableSlots,
         )
         const report = buildConstraintReport([certResult, availResult])

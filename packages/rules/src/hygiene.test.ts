@@ -16,13 +16,13 @@ import { describe, it, expect } from 'vitest'
 // Set to actual counts as of housekeeping cycle 2026-03-27.
 // Only lower these — never raise them.
 const MAX_AS_UNKNOWN_AS = 5
-const MAX_TS_SUPPRESS   = 1  // @ts-ignore in apps/web/auth.ts (upstream NextAuth v5 bug)
-const MAX_JSON_PARSE    = 3  // stream.ts (SSE), booking-consumer.ts (job queue), stream.ts (publish)
-const MAX_CONSOLE       = 1  // apps/api/src/routes/stream.ts console usage
-const MAX_VOID_DISPATCH = 9  // fire-and-forget async calls (setInterval/setTimeout/signal handlers)
+const MAX_TS_SUPPRESS = 1 // @ts-ignore in apps/web/auth.ts (upstream NextAuth v5 bug)
+const MAX_JSON_PARSE = 3 // stream.ts (SSE), booking-consumer.ts (job queue), stream.ts (publish)
+const MAX_CONSOLE = 1 // apps/api/src/routes/stream.ts console usage
+const MAX_VOID_DISPATCH = 9 // fire-and-forget async calls (setInterval/setTimeout/signal handlers)
 
 // These are zero — keep them there.
-const MAX_ANY_TYPE      = 0
+const MAX_ANY_TYPE = 0
 
 // ── Source collection ────────────────────────────────────────────────────────
 
@@ -50,7 +50,8 @@ function collectSourceFiles(dir: string): SourceLine[] {
       entry.name.endsWith('.test.tsx') ||
       entry.name.endsWith('.spec.tsx') ||
       entry.name.endsWith('.d.ts')
-    ) continue
+    )
+      continue
     const text = fs.readFileSync(full, 'utf8')
     text.split('\n').forEach((line, i) => {
       results.push({ file: full, lineNo: i + 1, text: line })
