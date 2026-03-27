@@ -10,9 +10,11 @@ import { useQueueUpdates } from '@/hooks/useQueueUpdates'
 interface QueueClientProps {
   operatorId: string
   apiUrl: string
+  /** Pre-signed HS256 JWT from the server component — avoids exposing JWT_SECRET client-side. */
+  token: string
 }
 
-export function QueueClient({ operatorId, apiUrl }: QueueClientProps) {
+export function QueueClient({ operatorId, apiUrl, token }: QueueClientProps) {
   const [suggestions, setSuggestions] = useState<Suggestion[]>([])
   const [workflowType, setWorkflowType] = useState<WorkflowType | ''>('')
   const [selected, setSelected] = useState<string[]>([])
@@ -20,11 +22,10 @@ export function QueueClient({ operatorId, apiUrl }: QueueClientProps) {
   const [bulkLoading, setBulkLoading] = useState(false)
   const [liveIndicator, setLiveIndicator] = useState(false)
 
-  // Build headers — in Phase 1 we use a dev JWT; Phase 1+ uses real session token
+  // Build headers — token is a proper HS256 JWT signed server-side with JWT_SECRET
   const headers = {
     'Content-Type': 'application/json',
-    // Demo: local-dev JWT signed with 'local-dev-secret', carries operatorId claim
-    Authorization: `Bearer ${buildDevToken(operatorId)}`,
+    Authorization: `Bearer ${token}`,
   }
 
   const fetchSuggestions = useCallback(async () => {
@@ -49,7 +50,7 @@ export function QueueClient({ operatorId, apiUrl }: QueueClientProps) {
   }, [fetchSuggestions])
 
   // SSE live updates — flash indicator and refresh queue on any queue event
-  useQueueUpdates(apiUrl, buildDevToken(operatorId), () => {
+  useQueueUpdates(apiUrl, token, () => {
     setLiveIndicator(true)
     setTimeout(() => setLiveIndicator(false), 2000)
     void fetchSuggestions()
@@ -166,17 +167,3 @@ export function QueueClient({ operatorId, apiUrl }: QueueClientProps) {
   )
 }
 
-/**
- * Builds a dev JWT for local development.
- * In production, the real session token from NextAuth is used instead.
- * This is a placeholder — Phase 1 wires actual session tokens to API calls.
- */
-function buildDevToken(operatorId: string): string {
-  // Encode a minimal JWT payload — only valid with local-dev-secret
-  const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }))
-  const payload = btoa(
-    JSON.stringify({ sub: 'dev-user', operatorId, iat: Math.floor(Date.now() / 1000) }),
-  )
-  // Signature is not validated in dev — local-dev-secret is used by Fastify
-  return `${header}.${payload}.dev-sig`
-}
