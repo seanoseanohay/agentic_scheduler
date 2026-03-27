@@ -55,7 +55,7 @@ async function main() {
         create: [
           { flagKey: 'waitlist_fill', enabled: true },
           { flagKey: 'cancellation_recovery', enabled: true },
-          { flagKey: 'discovery_flight', enabled: false },
+          { flagKey: 'discovery_flight', enabled: true },
           { flagKey: 'next_lesson', enabled: false },
         ],
       },
