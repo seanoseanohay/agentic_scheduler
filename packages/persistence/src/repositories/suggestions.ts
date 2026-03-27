@@ -79,8 +79,11 @@ export async function updateSuggestionStatus(
   reviewedBy?: string,
   reviewNotes?: string,
 ): Promise<Suggestion> {
+  // Include operatorId in the where clause so the tenant isolation check is
+  // atomic with the write. Without this the update would succeed on a
+  // cross-tenant id before any post-hoc check could prevent it.
   const row = await prisma.suggestion.update({
-    where: { id },
+    where: { id, operatorId: ctx.operatorId },
     data: {
       status,
       ...(reviewedBy !== undefined ? { reviewedBy } : {}),
@@ -88,9 +91,6 @@ export async function updateSuggestionStatus(
       ...(reviewedBy ? { reviewedAt: new Date() } : {}),
     },
   })
-  if (row.operatorId !== ctx.operatorId) {
-    throw new Error('Tenant isolation violation: suggestion does not belong to this operator')
-  }
   return mapSuggestion(row, ctx)
 }
 
