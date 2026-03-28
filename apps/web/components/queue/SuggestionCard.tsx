@@ -76,6 +76,13 @@ export function SuggestionCard({
   }
 
   const { candidate, explanation } = suggestion
+
+  // For discovery flights, prospect name is encoded in triggerSummary:
+  // "Discovery flight request from Jane Smith (jane@example.com)"
+  const discoveryProspectName =
+    suggestion.workflowType === 'discovery_flight'
+      ? (explanation.triggerSummary.match(/from (.+?) \(/) ?? [])[1] ?? null
+      : null
   const startStr = new Date(candidate.startTime).toLocaleString(undefined, {
     weekday: 'short',
     month: 'short',
@@ -190,7 +197,7 @@ export function SuggestionCard({
           }}
         >
           {[
-            ['Student', STUDENT_NAMES[candidate.studentId] ?? candidate.studentId],
+            ['Student', discoveryProspectName ?? STUDENT_NAMES[candidate.studentId] ?? candidate.studentId],
             ['Instructor', INSTRUCTOR_NAMES[candidate.instructorId] ?? candidate.instructorId],
             ['Aircraft', AIRCRAFT_LABELS[candidate.aircraftId] ?? candidate.aircraftId],
             ['Lesson', candidate.lessonType.charAt(0).toUpperCase() + candidate.lessonType.slice(1)],

@@ -160,7 +160,11 @@ export class MockFspClient implements IFspClient {
 
   async getAvailableSlots(opts: { start: Date; end: Date }): Promise<FspAvailabilitySlot[]> {
     const slots: FspAvailabilitySlot[] = []
+    // Pin each slot to 10:00 AM UTC so daylight constraint always passes in mock
     const cursor = new Date(opts.start)
+    cursor.setUTCHours(10, 0, 0, 0)
+    // If pinning to 10 AM already passed today, start tomorrow
+    if (cursor <= opts.start) cursor.setDate(cursor.getDate() + 1)
     while (cursor < opts.end) {
       slots.push({
         startTime: new Date(cursor),

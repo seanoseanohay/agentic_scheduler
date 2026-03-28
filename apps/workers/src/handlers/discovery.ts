@@ -65,7 +65,9 @@ export async function handleDiscoveryFlights(
   const availableSlots = await fsp.getAvailableSlots({ start: searchStart, end: searchEnd })
 
   for (const prospect of pendingProspects) {
-    const triggerKey = `discovery_flight:${prospect.id}`
+    // Date-scoped key so stuck prospects retry each day rather than staying skipped forever
+    const today = new Date().toISOString().substring(0, 10)
+    const triggerKey = `discovery_flight:${prospect.id}:${today}`
 
     const { run, isNew } = await createWorkflowRun(ctx, {
       workflowType: 'discovery_flight',
