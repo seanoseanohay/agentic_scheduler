@@ -64,6 +64,20 @@ export async function handleDiscoveryFlights(
   const searchEnd = addHours(searchStart, tenant.searchWindowDays * 24)
   const availableSlots = await fsp.getAvailableSlots({ start: searchStart, end: searchEnd })
 
+  // Build a set of slot keys already claimed by active discovery suggestions so
+  // multiple prospects in the same poll cycle don't all race to the same slot.
+  const claimedSlots = await prisma.suggestion.findMany({
+    where: {
+      operatorId: ctx.operatorId,
+      workflowType: 'discovery_flight',
+      status: { in: ['pending', 'approved', 'booked'] },
+    },
+    select: { instructorId: true, startTime: true },
+  })
+  const claimedKeys = new Set(
+    claimedSlots.map((s) => `${s.instructorId}:${s.startTime.toISOString()}`),
+  )
+
   for (const prospect of pendingProspects) {
     // Date-scoped key so stuck prospects retry each day rather than staying skipped forever
     const today = new Date().toISOString().substring(0, 10)
@@ -106,16 +120,24 @@ export async function handleDiscoveryFlights(
         compliantSlots.push({ slot, instructor, ac, report })
       }
 
-      if (compliantSlots.length === 0) {
+      // Exclude slots already claimed by another discovery suggestion this cycle
+      const unclaimed = compliantSlots.filter(
+        ({ slot }) => !claimedKeys.has(`${slot.instructorId}:${slot.startTime.toISOString()}`),
+      )
+
+      if (unclaimed.length === 0) {
         await skipWorkflowRun(run.id)
-        log.info({ prospectId: prospect.id }, 'No daylight-compliant slots found')
+        log.info({ prospectId: prospect.id }, 'No daylight-compliant unclaimed slots found')
         continue
       }
 
-      // Take the earliest compliant slot
-      const best = compliantSlots.sort(
+      // Take the earliest unclaimed compliant slot
+      const best = unclaimed.sort(
         (a, b) => a.slot.startTime.getTime() - b.slot.startTime.getTime(),
       )[0]!
+
+      // Mark this slot claimed so the next prospect in this loop picks a different one
+      claimedKeys.add(`${best.slot.instructorId}:${best.slot.startTime.toISOString()}`)
 
       // Initiate payment intent
       const paymentIntentId = await createPaymentIntent(prospect, tenant)
