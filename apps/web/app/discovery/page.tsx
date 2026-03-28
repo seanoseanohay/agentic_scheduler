@@ -66,6 +66,8 @@ export default async function DiscoveryPage() {
       operatorId={operatorId}
       prospects={prospects}
       bookingLink={bookingLink}
+      apiUrl={apiUrl}
+      token={token}
     />
   )
 }

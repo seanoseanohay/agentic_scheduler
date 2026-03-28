@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { AppNav } from '@/components/AppNav'
 import type { DiscoveryProspect } from './page'
@@ -51,6 +51,8 @@ interface DiscoveryClientProps {
   operatorId: string
   prospects: DiscoveryProspect[]
   bookingLink: string
+  apiUrl: string
+  token: string
 }
 
 function ProspectRow({ prospect }: { prospect: DiscoveryProspect }) {
@@ -157,8 +159,29 @@ function ProspectRow({ prospect }: { prospect: DiscoveryProspect }) {
   )
 }
 
-export function DiscoveryClient({ prospects, bookingLink }: DiscoveryClientProps) {
+export function DiscoveryClient({ prospects: initial, bookingLink, apiUrl, token }: DiscoveryClientProps) {
+  const [prospects, setProspects] = useState<DiscoveryProspect[]>(initial)
   const [copied, setCopied] = useState(false)
+
+  const poll = useCallback(async () => {
+    try {
+      const res = await fetch(`${apiUrl}/api/v1/prospects`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (res.ok) {
+        const data = (await res.json()) as { prospects: DiscoveryProspect[] }
+        setProspects(data.prospects)
+      }
+    } catch {
+      // silently ignore — keep showing last known data
+    }
+  }, [apiUrl, token])
+
+  // Poll every 10 seconds so pending → offered transitions appear without navigation
+  useEffect(() => {
+    const id = setInterval(() => { void poll() }, 10_000)
+    return () => clearInterval(id)
+  }, [poll])
 
   function handleCopy() {
     void navigator.clipboard.writeText(bookingLink).then(() => {
