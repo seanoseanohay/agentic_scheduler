@@ -18,6 +18,7 @@ import {
   completeWorkflowRun,
   failWorkflowRun,
   skipWorkflowRun,
+  listSuggestions,
 } from '@oneshot/persistence'
 import {
   evaluateCertificationConstraint,
@@ -29,7 +30,9 @@ import type { RankingCandidate } from '@oneshot/ranking'
 import { tenantLogger } from '@oneshot/observability'
 import { addHours } from '../utils/date.js'
 
-const MAX_SUGGESTIONS_PER_SLOT = 3
+// One open slot can only ever be filled by one student.
+// Offering the same slot to multiple students simultaneously causes triple-booking.
+const MAX_SUGGESTIONS_PER_SLOT = 1
 
 export async function handleWaitlistFill(
   ctx: TenantContext,
@@ -84,6 +87,23 @@ export async function handleWaitlistFill(
     if (!isNew) continue
 
     try {
+      // Guard: if a pending suggestion already exists for this exact slot (same
+      // instructor + startTime), skip rather than double-propose. This protects
+      // against worker restarts that flush the workflow_runs idempotency table.
+      const existingForSlot = await listSuggestions(ctx, {
+        status: 'pending',
+        workflowType: 'waitlist_fill',
+      })
+      const slotAlreadyOffered = existingForSlot.some(
+        (s) =>
+          s.candidate.instructorId === slot.instructorId &&
+          s.candidate.startTime.toISOString() === slot.startTime.toISOString(),
+      )
+      if (slotAlreadyOffered) {
+        await skipWorkflowRun(run.id)
+        continue
+      }
+
       const instructor = instructorMap.get(slot.instructorId)
       const ac = aircraftMap.get(slot.aircraftId)
       if (!instructor || !ac) {

@@ -7,6 +7,7 @@
 
 import type { WorkflowRun } from '@oneshot/shared-types'
 import type { TenantContext } from '@oneshot/shared-types'
+import { Prisma } from '@prisma/client'
 import { prisma } from '../client.js'
 
 export async function createWorkflowRun(
@@ -17,25 +18,31 @@ export async function createWorkflowRun(
     triggerPayload: unknown
   },
 ): Promise<{ run: WorkflowRun; isNew: boolean }> {
-  // findOrCreate pattern — returns existing if triggerKey already processed
-  const existing = await prisma.workflowRun.findUnique({
-    where: { tenantId_triggerKey: { tenantId: ctx.tenantId, triggerKey: data.triggerKey } },
-  })
-  if (existing) {
-    return { run: mapRun(existing, ctx), isNew: false }
+  // Optimistic-create pattern: attempt INSERT first; on unique-constraint
+  // violation (P2002) a concurrent worker already claimed this triggerKey —
+  // fall back to SELECT the existing row.  This is atomic at the DB level and
+  // avoids the TOCTOU race of the previous findUnique → create two-step.
+  try {
+    const row = await prisma.workflowRun.create({
+      data: {
+        tenantId: ctx.tenantId,
+        operatorId: ctx.operatorId,
+        workflowType: data.workflowType,
+        status: 'running',
+        triggerKey: data.triggerKey,
+        triggerPayload: data.triggerPayload as never,
+      },
+    })
+    return { run: mapRun(row, ctx), isNew: true }
+  } catch (err) {
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+      const existing = await prisma.workflowRun.findUniqueOrThrow({
+        where: { tenantId_triggerKey: { tenantId: ctx.tenantId, triggerKey: data.triggerKey } },
+      })
+      return { run: mapRun(existing, ctx), isNew: false }
+    }
+    throw err
   }
-
-  const row = await prisma.workflowRun.create({
-    data: {
-      tenantId: ctx.tenantId,
-      operatorId: ctx.operatorId,
-      workflowType: data.workflowType,
-      status: 'running',
-      triggerKey: data.triggerKey,
-      triggerPayload: data.triggerPayload as never,
-    },
-  })
-  return { run: mapRun(row, ctx), isNew: true }
 }
 
 export async function completeWorkflowRun(
