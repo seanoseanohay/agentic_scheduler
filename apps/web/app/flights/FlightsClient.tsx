@@ -24,6 +24,10 @@ const INSTRUCTOR_NAMES: Record<string, string> = {
   'ins-001': 'Dave Martinez',
   'ins-002': 'Eve Thompson',
 }
+const AIRCRAFT_NAMES: Record<string, string> = {
+  'ac-001': 'N12345 · C172',
+  'ac-002': 'N67890 · PA28',
+}
 
 const WORKFLOW_CONFIG: Record<
   string,
@@ -75,7 +79,10 @@ function FlightRow({ flight }: { flight: RawSuggestion }) {
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
             <PersonIcon sx={{ fontSize: 14, color: 'text.secondary' }} />
             <Typography variant="body2" color="text.secondary">
-              {STUDENT_NAMES[flight.candidate.studentId] ?? flight.candidate.studentId}
+              {STUDENT_NAMES[flight.candidate.studentId] ??
+                (flight.workflowType === 'discovery_flight'
+                  ? 'Discovery Prospect'
+                  : flight.candidate.studentId)}
             </Typography>
           </Box>
 
@@ -91,7 +98,7 @@ function FlightRow({ flight }: { flight: RawSuggestion }) {
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
             <AirplanemodeActiveIcon sx={{ fontSize: 14, color: 'text.secondary' }} />
             <Typography variant="body2" color="text.secondary">
-              {flight.candidate.aircraftId}
+              {AIRCRAFT_NAMES[flight.candidate.aircraftId] ?? flight.candidate.aircraftId}
             </Typography>
           </Box>
 
