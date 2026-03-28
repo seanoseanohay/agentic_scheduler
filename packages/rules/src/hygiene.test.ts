@@ -16,7 +16,7 @@ import { describe, it, expect } from 'vitest'
 // Set to actual counts as of housekeeping cycle 2026-03-27.
 // Only lower these — never raise them.
 const MAX_AS_UNKNOWN_AS = 5
-const MAX_TS_SUPPRESS = 1 // @ts-ignore in apps/web/auth.ts (upstream NextAuth v5 bug)
+const MAX_TS_SUPPRESS = 1 // one ts-suppress directive in apps/web/auth.ts (upstream NextAuth v5 bug)
 const MAX_JSON_PARSE = 3 // stream.ts (SSE), booking-consumer.ts (job queue), stream.ts (publish)
 const MAX_CONSOLE = 1 // apps/api/src/routes/stream.ts console usage
 const MAX_VOID_DISPATCH = 9 // fire-and-forget async calls (setInterval/setTimeout/signal handlers)

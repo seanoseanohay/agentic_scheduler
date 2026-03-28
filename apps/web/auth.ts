@@ -84,7 +84,6 @@ const config: NextAuthConfig = {
 
 // NextAuth v5 (beta) inferred types reference internal library paths.
 // This is a known upstream limitation — tracked at https://github.com/nextauthjs/next-auth/issues/9645
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore
+// @ts-expect-error — NextAuth v5 beta inferred types reference internal paths (upstream)
 const { handlers, auth, signIn, signOut } = NextAuth(config)
 export { handlers, auth, signIn, signOut }
