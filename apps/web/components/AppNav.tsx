@@ -25,9 +25,10 @@ import { signOutAction } from '@/app/actions'
 
 const NAV_LINKS = [
   { href: '/queue', label: 'Queue', icon: <ListAltIcon fontSize="small" /> },
+  { href: '/flights', label: 'Flights', icon: <FlightTakeoffIcon fontSize="small" /> },
   { href: '/discovery', label: 'Discovery', icon: <ExploreIcon fontSize="small" /> },
-  { href: '/settings', label: 'Settings', icon: <SettingsIcon fontSize="small" /> },
   { href: '/history', label: 'History', icon: <HistoryIcon fontSize="small" /> },
+  { href: '/settings', label: 'Settings', icon: <SettingsIcon fontSize="small" /> },
 ]
 
 interface AppNavProps {
