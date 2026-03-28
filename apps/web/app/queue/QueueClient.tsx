@@ -21,11 +21,12 @@ interface QueueClientProps {
   operatorId: string
   apiUrl: string
   token: string
+  initialWorkflowType?: string
 }
 
-export function QueueClient({ operatorId, apiUrl, token }: QueueClientProps) {
+export function QueueClient({ operatorId, apiUrl, token, initialWorkflowType = '' }: QueueClientProps) {
   const [suggestions, setSuggestions] = useState<Suggestion[]>([])
-  const [workflowType, setWorkflowType] = useState<WorkflowType | ''>('')
+  const [workflowType, setWorkflowType] = useState<WorkflowType | ''>(initialWorkflowType as WorkflowType | '')
   const [selected, setSelected] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
   const [bulkLoading, setBulkLoading] = useState(false)

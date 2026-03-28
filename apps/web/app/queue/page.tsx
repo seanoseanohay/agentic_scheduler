@@ -35,16 +35,28 @@ function signApiToken(operatorId: string): string {
   return `${header}.${payload}.${sig}`
 }
 
-export default async function QueuePage() {
+interface PageProps {
+  searchParams: Promise<{ workflowType?: string }>
+}
+
+export default async function QueuePage({ searchParams }: PageProps) {
   const session = await auth()
   if (!session) redirect('/login')
 
   const s = session as typeof session & { operatorId?: string }
   const operatorId = s.operatorId ?? 'demo-operator-alpha'
   const apiUrl = process.env['NEXT_PUBLIC_API_URL'] ?? 'http://localhost:3001'
+  const { workflowType } = await searchParams
 
   // Sign a proper HS256 token server-side so the API can verify it
   const token = signApiToken(operatorId)
 
-  return <QueueClient operatorId={operatorId} apiUrl={apiUrl} token={token} />
+  return (
+    <QueueClient
+      operatorId={operatorId}
+      apiUrl={apiUrl}
+      token={token}
+      initialWorkflowType={workflowType ?? ''}
+    />
+  )
 }

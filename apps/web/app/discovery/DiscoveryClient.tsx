@@ -1,10 +1,12 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { AppNav } from '@/components/AppNav'
 import type { DiscoveryProspect } from './page'
 import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
+import Button from '@mui/material/Button'
 import Card from '@mui/material/Card'
 import CardContent from '@mui/material/CardContent'
 import Chip from '@mui/material/Chip'
@@ -15,11 +17,35 @@ import Stack from '@mui/material/Stack'
 import TextField from '@mui/material/TextField'
 import Tooltip from '@mui/material/Tooltip'
 import Typography from '@mui/material/Typography'
+import ArrowForwardIcon from '@mui/icons-material/ArrowForward'
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday'
 import ContentCopyIcon from '@mui/icons-material/ContentCopy'
 import EmailIcon from '@mui/icons-material/Email'
 import ExploreIcon from '@mui/icons-material/Explore'
+import HourglassEmptyIcon from '@mui/icons-material/HourglassEmpty'
 import PersonIcon from '@mui/icons-material/Person'
+
+const STATUS_CONFIG: Record<
+  string,
+  {
+    label: string
+    color: 'warning' | 'info' | 'success' | 'error' | 'default'
+    hint: string
+  }
+> = {
+  pending: {
+    label: 'Pending',
+    color: 'warning',
+    hint: 'AI is finding a slot — will appear in your Queue within 30 seconds.',
+  },
+  offered: {
+    label: 'Offered',
+    color: 'info',
+    hint: 'A slot was found. Go to the Queue → Discovery Flight filter to approve or reject.',
+  },
+  booked: { label: 'Booked', color: 'success', hint: 'Flight confirmed and scheduled.' },
+  cancelled: { label: 'Cancelled', color: 'error', hint: 'Prospect cancelled.' },
+}
 
 interface DiscoveryClientProps {
   operatorId: string
@@ -28,6 +54,12 @@ interface DiscoveryClientProps {
 }
 
 function ProspectRow({ prospect }: { prospect: DiscoveryProspect }) {
+  const cfg = STATUS_CONFIG[prospect.status] ?? {
+    label: prospect.status,
+    color: 'default' as const,
+    hint: '',
+  }
+
   const createdAt = new Date(prospect.createdAt).toLocaleDateString(undefined, {
     month: 'short',
     day: 'numeric',
@@ -47,10 +79,10 @@ function ProspectRow({ prospect }: { prospect: DiscoveryProspect }) {
         <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 1.5 }}>
           {/* Status chip */}
           <Chip
-            label={prospect.status}
-            color={prospect.status === 'pending' ? 'warning' : 'success'}
+            label={cfg.label}
+            color={cfg.color}
             size="small"
-            sx={{ fontWeight: 600, textTransform: 'capitalize' }}
+            sx={{ fontWeight: 600 }}
           />
 
           {/* Name */}
@@ -86,6 +118,40 @@ function ProspectRow({ prospect }: { prospect: DiscoveryProspect }) {
             Submitted {createdAt}
           </Typography>
         </Box>
+
+        {/* Status hint + action */}
+        {cfg.hint && (
+          <Box
+            sx={{
+              mt: 1.5,
+              pt: 1.5,
+              borderTop: '1px solid',
+              borderColor: 'divider',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1,
+            }}
+          >
+            {prospect.status === 'pending' && (
+              <HourglassEmptyIcon sx={{ fontSize: 14, color: 'text.disabled' }} />
+            )}
+            <Typography variant="caption" color="text.secondary" sx={{ flexGrow: 1 }}>
+              {cfg.hint}
+            </Typography>
+            {prospect.status === 'offered' && (
+              <Button
+                component={Link}
+                href="/queue?workflowType=discovery_flight"
+                size="small"
+                variant="outlined"
+                endIcon={<ArrowForwardIcon sx={{ fontSize: '14px !important' }} />}
+                sx={{ flexShrink: 0, fontSize: '0.75rem' }}
+              >
+                Review in Queue
+              </Button>
+            )}
+          </Box>
+        )}
       </CardContent>
     </Card>
   )
@@ -101,13 +167,16 @@ export function DiscoveryClient({ prospects, bookingLink }: DiscoveryClientProps
     })
   }
 
+  const pendingCount = prospects.filter((p) => p.status === 'pending').length
+  const offeredCount = prospects.filter((p) => p.status === 'offered').length
+
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
       <AppNav />
 
       <Container maxWidth="md" sx={{ py: 4 }}>
         {/* Page header */}
-        <Box sx={{ mb: 4 }}>
+        <Box sx={{ mb: 3 }}>
           <Typography variant="h5" fontWeight={700} color="text.primary">
             Discovery Prospects
           </Typography>
@@ -116,15 +185,44 @@ export function DiscoveryClient({ prospects, bookingLink }: DiscoveryClientProps
           </Typography>
         </Box>
 
+        {/* Action alert — shown when there are offered prospects waiting for review */}
+        {offeredCount > 0 && (
+          <Alert
+            severity="info"
+            sx={{ mb: 3 }}
+            action={
+              <Button
+                component={Link}
+                href="/queue?workflowType=discovery_flight"
+                size="small"
+                color="inherit"
+                endIcon={<ArrowForwardIcon />}
+              >
+                Go to Queue
+              </Button>
+            }
+          >
+            {offeredCount} prospect{offeredCount > 1 ? 's have' : ' has'} a slot offer waiting for
+            your approval in the Queue.
+          </Alert>
+        )}
+
+        {pendingCount > 0 && offeredCount === 0 && (
+          <Alert severity="warning" sx={{ mb: 3 }} icon={<HourglassEmptyIcon />}>
+            {pendingCount} prospect{pendingCount > 1 ? 's are' : ' is'} waiting for the AI to find
+            a compliant slot. This happens automatically every 30 seconds.
+          </Alert>
+        )}
+
         {/* Booking link card */}
         <Card variant="outlined" sx={{ mb: 4 }}>
           <CardContent sx={{ p: 3 }}>
-            <Typography variant="subtitle2" fontWeight={700} mb={1.5}>
+            <Typography variant="subtitle2" fontWeight={700} mb={0.5}>
               Public booking link
             </Typography>
             <Typography variant="body2" color="text.secondary" mb={2}>
-              Share this link with prospective students so they can submit a discovery flight
-              request.
+              Share this with prospective students. When they submit, they appear below and the AI
+              automatically finds them a daylight-compliant slot.
             </Typography>
             <TextField
               fullWidth
