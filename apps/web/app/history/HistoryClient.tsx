@@ -33,6 +33,17 @@ type RawSuggestion = Omit<Suggestion, 'reviewedAt' | 'expiresAt' | 'createdAt' |
   }
 }
 
+/** Display-name lookups for mock FSP entities. */
+const STUDENT_NAMES: Record<string, string> = {
+  'stu-001': 'Alice Nguyen',
+  'stu-002': 'Bob Kowalski',
+  'stu-003': 'Carol Park',
+}
+const INSTRUCTOR_NAMES: Record<string, string> = {
+  'ins-001': 'Dave Martinez',
+  'ins-002': 'Eve Thompson',
+}
+
 type FilterTab = 'all' | 'approved' | 'rejected' | 'booked'
 
 interface HistoryClientProps {
@@ -133,7 +144,7 @@ function HistoryRow({ suggestion }: { suggestion: RawSuggestion }) {
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
             <PersonIcon sx={{ fontSize: 14, color: 'text.secondary' }} />
             <Typography variant="body2" color="text.secondary">
-              {suggestion.candidate.studentId}
+              {STUDENT_NAMES[suggestion.candidate.studentId] ?? suggestion.candidate.studentId}
             </Typography>
           </Box>
 
@@ -141,7 +152,7 @@ function HistoryRow({ suggestion }: { suggestion: RawSuggestion }) {
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
             <SchoolIcon sx={{ fontSize: 14, color: 'text.secondary' }} />
             <Typography variant="body2" color="text.secondary">
-              {suggestion.candidate.instructorId}
+              {INSTRUCTOR_NAMES[suggestion.candidate.instructorId] ?? suggestion.candidate.instructorId}
             </Typography>
           </Box>
 

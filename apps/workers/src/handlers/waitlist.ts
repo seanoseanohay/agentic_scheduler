@@ -139,8 +139,8 @@ export async function handleWaitlistFill(
             lessonType: c.lessonType,
           },
           explanation: {
-            triggerSummary: `Open slot available on ${slotDate}`,
-            constraintsSatisfied: ['certification', 'availability'],
+            triggerSummary: `Open slot on ${new Date(slot.startTime).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })} — no confirmed booking`,
+            constraintsSatisfied: ['Instructor certified for aircraft type', 'Slot is available'],
             rankingReasons: c.rankingReasons,
             tradeoffs: c.tradeoffs,
           },

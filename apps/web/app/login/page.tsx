@@ -1,4 +1,7 @@
+import { AuthError } from 'next-auth'
+import { redirect } from 'next/navigation'
 import { signIn } from '@/auth'
+import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Card from '@mui/material/Card'
@@ -8,7 +11,13 @@ import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import FlightTakeoffIcon from '@mui/icons-material/FlightTakeoff'
 
-export default function LoginPage() {
+interface PageProps {
+  searchParams: Promise<{ error?: string }>
+}
+
+export default async function LoginPage({ searchParams }: PageProps) {
+  const params = await searchParams
+  const hasError = !!params.error
   const azureClientId = process.env['AZURE_AD_CLIENT_ID'] ?? ''
   const showAzure = azureClientId && azureClientId !== 'placeholder'
 
@@ -48,15 +57,28 @@ export default function LoginPage() {
             Agentic scheduler for Flight Schedule Pro
           </Typography>
 
+          {hasError && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              Invalid username or password. Please try again.
+            </Alert>
+          )}
+
           {/* Credentials form */}
           <form
             action={async (formData: FormData) => {
               'use server'
-              await signIn('credentials', {
-                username: formData.get('username'),
-                password: formData.get('password'),
-                redirectTo: '/queue',
-              })
+              try {
+                await signIn('credentials', {
+                  username: formData.get('username'),
+                  password: formData.get('password'),
+                  redirectTo: '/queue',
+                })
+              } catch (error) {
+                if (error instanceof AuthError) {
+                  redirect('/login?error=1')
+                }
+                throw error
+              }
             }}
           >
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -68,6 +90,7 @@ export default function LoginPage() {
                 required
                 fullWidth
                 size="medium"
+                error={hasError}
               />
               <TextField
                 name="password"
@@ -77,6 +100,7 @@ export default function LoginPage() {
                 required
                 fullWidth
                 size="medium"
+                error={hasError}
               />
               <Button type="submit" variant="contained" size="large" fullWidth sx={{ mt: 0.5 }}>
                 Sign in
