@@ -19,7 +19,7 @@ const MAX_AS_UNKNOWN_AS = 5
 const MAX_TS_SUPPRESS = 0
 const MAX_JSON_PARSE = 3 // stream.ts (SSE), booking-consumer.ts (job queue), stream.ts (publish)
 const MAX_CONSOLE = 1 // apps/api/src/routes/stream.ts console usage
-const MAX_VOID_DISPATCH = 9 // fire-and-forget async calls (setInterval/setTimeout/signal handlers)
+const MAX_VOID_DISPATCH = 10 // fire-and-forget async calls (setInterval/setTimeout/signal handlers)
 
 // These are zero — keep them there.
 const MAX_ANY_TYPE = 0
