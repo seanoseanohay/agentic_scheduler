@@ -116,8 +116,13 @@ export function SettingsClient({ tenant, operatorId }: SettingsClientProps) {
                         <LinearProgress
                           variant="determinate"
                           value={value * 100}
-                          sx={{ height: 6, borderRadius: 3, bgcolor: 'grey.100' }}
-                          color={value >= 0.3 ? 'primary' : value >= 0.15 ? 'info' : 'inherit'}
+                          color="primary"
+                          sx={{
+                            height: 6,
+                            borderRadius: 3,
+                            bgcolor: 'grey.100',
+                            '& .MuiLinearProgress-bar': { borderRadius: 3 },
+                          }}
                         />
                       </Box>
                     ),

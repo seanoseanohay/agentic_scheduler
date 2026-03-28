@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { AppNav } from '@/components/AppNav'
-import type { Suggestion, WorkflowType, SuggestionStatus } from '@oneshot/shared-types'
+import type { Suggestion, SuggestionStatus } from '@oneshot/shared-types'
 import Badge from '@mui/material/Badge'
 import Box from '@mui/material/Box'
 import Card from '@mui/material/Card'
@@ -40,7 +40,7 @@ interface HistoryClientProps {
 }
 
 const WORKFLOW_CONFIG: Record<
-  WorkflowType | string,
+  string,
   { label: string; color: 'secondary' | 'warning' | 'info' | 'success' | 'default' }
 > = {
   waitlist_fill: { label: 'Waitlist Fill', color: 'secondary' },

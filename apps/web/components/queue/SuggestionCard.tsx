@@ -23,6 +23,21 @@ interface SuggestionCardProps {
   onRejected?: () => void
 }
 
+/** Display-name lookup for mock FSP entities. In production these come from FSP API. */
+const STUDENT_NAMES: Record<string, string> = {
+  'stu-001': 'Alice Nguyen',
+  'stu-002': 'Bob Kowalski',
+  'stu-003': 'Carol Park',
+}
+const INSTRUCTOR_NAMES: Record<string, string> = {
+  'ins-001': 'Dave Martinez',
+  'ins-002': 'Eve Thompson',
+}
+const AIRCRAFT_LABELS: Record<string, string> = {
+  'ac-001': 'N12345 · C172',
+  'ac-002': 'N67890 · PA28',
+}
+
 const WORKFLOW_CONFIG: Record<
   string,
   { label: string; color: 'secondary' | 'warning' | 'info' | 'success' }
@@ -175,10 +190,10 @@ export function SuggestionCard({
           }}
         >
           {[
-            ['Student', candidate.studentId],
-            ['Instructor', candidate.instructorId],
-            ['Aircraft', candidate.aircraftId],
-            ['Lesson', candidate.lessonType],
+            ['Student', STUDENT_NAMES[candidate.studentId] ?? candidate.studentId],
+            ['Instructor', INSTRUCTOR_NAMES[candidate.instructorId] ?? candidate.instructorId],
+            ['Aircraft', AIRCRAFT_LABELS[candidate.aircraftId] ?? candidate.aircraftId],
+            ['Lesson', candidate.lessonType.charAt(0).toUpperCase() + candidate.lessonType.slice(1)],
           ].map(([label, value]) => (
             <Typography key={label} variant="body2" color="text.secondary">
               <Box component="span" fontWeight={600} color="text.primary">
