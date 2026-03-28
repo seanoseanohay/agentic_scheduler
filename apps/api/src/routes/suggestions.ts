@@ -96,6 +96,15 @@ export async function suggestionRoutes(app: FastifyInstance) {
       payload: { notes: parsed.data.notes },
     })
 
+    // For discovery flights, immediately mark the prospect so the Discovery
+    // page stops showing it as "offered" without waiting for the async orchestrator.
+    if (suggestion.workflowType === 'discovery_flight') {
+      await prisma.discoveryProspect.updateMany({
+        where: { id: suggestion.candidate.studentId, operatorId: ctx.operatorId },
+        data: { status: 'booked' },
+      })
+    }
+
     // Enqueue booking orchestration — validates + books in FSP asynchronously
     await publishBookingJob(ctx, request.params.id, actor)
 
