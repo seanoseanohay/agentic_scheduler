@@ -17,6 +17,7 @@ import AccountCircleIcon from '@mui/icons-material/AccountCircle'
 import ExploreIcon from '@mui/icons-material/Explore'
 import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord'
 import FlightTakeoffIcon from '@mui/icons-material/FlightTakeoff'
+import HistoryIcon from '@mui/icons-material/History'
 import ListAltIcon from '@mui/icons-material/ListAlt'
 import LogoutIcon from '@mui/icons-material/Logout'
 import SettingsIcon from '@mui/icons-material/Settings'
@@ -26,6 +27,7 @@ const NAV_LINKS = [
   { href: '/queue', label: 'Queue', icon: <ListAltIcon fontSize="small" /> },
   { href: '/discovery', label: 'Discovery', icon: <ExploreIcon fontSize="small" /> },
   { href: '/settings', label: 'Settings', icon: <SettingsIcon fontSize="small" /> },
+  { href: '/history', label: 'History', icon: <HistoryIcon fontSize="small" /> },
 ]
 
 interface AppNavProps {
