@@ -15,6 +15,7 @@ import {
   updateSuggestionStatus,
   getSuggestionById,
   writeAuditEvent,
+  prisma,
 } from '@oneshot/persistence'
 import { publishBookingJob } from '../jobs/publisher.js'
 
@@ -127,6 +128,15 @@ export async function suggestionRoutes(app: FastifyInstance) {
       entityId: request.params.id,
       payload: { reason: parsed.data.reason },
     })
+
+    // For discovery flights, mark the prospect cancelled so the Discovery
+    // page reflects the operator's decision without needing a page refresh.
+    if (suggestion.workflowType === 'discovery_flight') {
+      await prisma.discoveryProspect.updateMany({
+        where: { id: suggestion.candidate.studentId, operatorId: ctx.operatorId },
+        data: { status: 'cancelled' },
+      })
+    }
 
     return { suggestion }
   })

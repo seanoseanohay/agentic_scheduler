@@ -5,13 +5,13 @@ import type { RawSuggestion } from './page'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Container from '@mui/material/Container'
+import Tooltip from '@mui/material/Tooltip'
 import Typography from '@mui/material/Typography'
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
 import ChevronRightIcon from '@mui/icons-material/ChevronRight'
 import AirplanemodeActiveIcon from '@mui/icons-material/AirplanemodeActive'
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
-/** Display-name lookups for mock FSP entities. */
 const STUDENT_NAMES: Record<string, string> = {
   'stu-001': 'Alice Nguyen',
   'stu-002': 'Bob Kowalski',
@@ -22,175 +22,182 @@ const INSTRUCTOR_NAMES: Record<string, string> = {
   'ins-002': 'Eve Thompson',
 }
 
-const HOUR_START = 6   // 6 AM
-const HOUR_END = 21    // 9 PM (last label; grid ends at 21:00)
+const HOUR_START = 6
+const HOUR_END = 21
 const CELL_HEIGHT = 64 // px per hour
-const TIME_COL_WIDTH = 56 // px
+const TIME_COL_WIDTH = 52
 
-/** Color map by workflowType → MUI theme color token */
 const WORKFLOW_COLORS: Record<string, string> = {
-  waitlist_fill: 'secondary.main',
-  cancellation_recovery: 'warning.main',
-  discovery_flight: 'info.main',
-  next_lesson: 'success.main',
+  waitlist_fill: '#7C3AED',
+  cancellation_recovery: '#D97706',
+  discovery_flight: '#2563EB',
+  next_lesson: '#059669',
 }
 
-/** Returns the Monday of the week containing `date` (local time). */
+const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+
 function getWeekStart(date: Date): Date {
   const d = new Date(date)
-  const day = d.getDay() // 0=Sun, 1=Mon…
-  const diff = (day === 0 ? -6 : 1 - day)
-  d.setDate(d.getDate() + diff)
+  const day = d.getDay()
+  d.setDate(d.getDate() + (day === 0 ? -6 : 1 - day))
   d.setHours(0, 0, 0, 0)
   return d
 }
 
-/** Format a week range label like "Apr 7 – Apr 13, 2026". */
 function weekLabel(monday: Date): string {
   const sunday = new Date(monday)
   sunday.setDate(monday.getDate() + 6)
-  const fmt = (d: Date, year?: boolean) =>
-    d.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      ...(year ? { year: 'numeric' } : {}),
-    })
+  const fmt = (d: Date, yr?: boolean) =>
+    d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', ...(yr ? { year: 'numeric' } : {}) })
   return `${fmt(monday)} – ${fmt(sunday, true)}`
 }
 
-function isSameDay(a: Date, b: Date): boolean {
-  return (
-    a.getFullYear() === b.getFullYear() &&
-    a.getMonth() === b.getMonth() &&
-    a.getDate() === b.getDate()
+function isSameDay(a: Date, b: Date) {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate()
+}
+
+/** Assign column indices to overlapping blocks so they render side-by-side. */
+function layoutBlocks(flights: RawSuggestion[]): { flight: RawSuggestion; col: number; totalCols: number }[] {
+  const sorted = [...flights].sort(
+    (a, b) => new Date(a.candidate.startTime).getTime() - new Date(b.candidate.startTime).getTime(),
   )
+
+  const result: { flight: RawSuggestion; col: number; totalCols: number }[] = []
+  // groups: each group is a set of overlapping events
+  const groups: { flight: RawSuggestion; col: number; endTime: number }[][] = []
+
+  for (const flight of sorted) {
+    const start = new Date(flight.candidate.startTime).getTime()
+    const end = new Date(flight.candidate.endTime).getTime()
+
+    // Find an existing group that overlaps with this flight
+    let placed = false
+    for (const group of groups) {
+      // Check if this flight overlaps with any event in the group
+      const overlaps = group.some((e) => {
+        const eStart = new Date(e.flight.candidate.startTime).getTime()
+        const eEnd = new Date(e.flight.candidate.endTime).getTime()
+        return start < eEnd && end > eStart
+      })
+      if (overlaps) {
+        // Assign the next available column within this group
+        const usedCols = new Set(group.map((e) => e.col))
+        let col = 0
+        while (usedCols.has(col)) col++
+        group.push({ flight, col, endTime: end })
+        placed = true
+        break
+      }
+    }
+    if (!placed) {
+      groups.push([{ flight, col: 0, endTime: end }])
+    }
+  }
+
+  // Compute totalCols for each group and build result
+  for (const group of groups) {
+    const totalCols = Math.max(...group.map((e) => e.col)) + 1
+    for (const entry of group) {
+      result.push({ flight: entry.flight, col: entry.col, totalCols })
+    }
+  }
+  return result
 }
 
 interface FlightsClientProps {
   flights: RawSuggestion[]
+  apiUrl: string
+  token: string
 }
 
-export function FlightsClient({ flights }: FlightsClientProps) {
+export function FlightsClient({ flights: initial, apiUrl, token }: FlightsClientProps) {
+  const [flights, setFlights] = useState<RawSuggestion[]>(initial)
   const [weekOffset, setWeekOffset] = useState(0)
   const [now, setNow] = useState(() => new Date())
   const gridRef = useRef<HTMLDivElement>(null)
 
-  // Update current time every minute for the red indicator
+  // Poll for new booked flights every 30s so calendar updates after approvals
+  const poll = useCallback(async () => {
+    try {
+      const res = await fetch(`${apiUrl}/api/v1/suggestions?status=booked&limit=200`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (!res.ok) return
+      const data = (await res.json()) as { suggestions: RawSuggestion[] }
+      const sorted = (data.suggestions ?? []).sort(
+        (a, b) => new Date(a.candidate.startTime).getTime() - new Date(b.candidate.startTime).getTime(),
+      )
+      setFlights(sorted)
+    } catch {
+      // keep last-known data on network error
+    }
+  }, [apiUrl, token])
+
   useEffect(() => {
-    const id = setInterval(() => setNow(new Date()), 60_000)
-    return () => clearInterval(id)
-  }, [])
+    const flightPoll = setInterval(() => { void poll() }, 30_000)
+    const clockTick = setInterval(() => setNow(new Date()), 60_000)
+    return () => { clearInterval(flightPoll); clearInterval(clockTick) }
+  }, [poll])
 
   const today = new Date()
   today.setHours(0, 0, 0, 0)
 
-  // Monday of the displayed week
   const weekStart = getWeekStart(new Date())
   weekStart.setDate(weekStart.getDate() + weekOffset * 7)
+  const weekEnd = new Date(weekStart)
+  weekEnd.setDate(weekStart.getDate() + 7)
 
-  // Build array of 7 days (Mon–Sun)
   const days = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(weekStart)
     d.setDate(weekStart.getDate() + i)
     return d
   })
 
-  // Filter flights to this week
-  const weekEnd = new Date(weekStart)
-  weekEnd.setDate(weekStart.getDate() + 7)
-
   const weekFlights = flights.filter((f) => {
     const t = new Date(f.candidate.startTime).getTime()
     return t >= weekStart.getTime() && t < weekEnd.getTime()
   })
 
-  // Hours array for time labels
-  const hours = Array.from(
-    { length: HOUR_END - HOUR_START },
-    (_, i) => HOUR_START + i,
-  )
+  const hours = Array.from({ length: HOUR_END - HOUR_START }, (_, i) => HOUR_START + i)
 
-  // Current-time indicator position
   const nowHour = now.getHours() + now.getMinutes() / 60
-  const todayInWeek = days.find((d) => isSameDay(d, today))
-  const showNowLine =
-    todayInWeek !== undefined && nowHour >= HOUR_START && nowHour < HOUR_END
+  const showNowLine = days.some((d) => isSameDay(d, today)) && nowHour >= HOUR_START && nowHour < HOUR_END
   const nowTop = (nowHour - HOUR_START) * CELL_HEIGHT
-
-  const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
       <AppNav />
 
       <Container maxWidth="xl" sx={{ py: 3 }}>
-        {/* Page header */}
+        {/* Header */}
         <Box sx={{ mb: 2 }}>
-          <Typography variant="h5" fontWeight={700} color="text.primary">
-            Flights
-          </Typography>
+          <Typography variant="h5" fontWeight={700}>Flights</Typography>
           <Typography variant="body2" color="text.secondary" mt={0.25}>
-            Upcoming booked flights — confirmed and scheduled
+            Confirmed bookings — updates automatically when suggestions are approved
           </Typography>
         </Box>
 
-        {/* Week navigation bar */}
-        <Box
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 1,
-            mb: 1.5,
-          }}
-        >
-          <Button
-            size="small"
-            variant="outlined"
-            startIcon={<ChevronLeftIcon />}
-            onClick={() => setWeekOffset((o) => o - 1)}
-          >
+        {/* Week nav */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
+          <Button size="small" variant="outlined" startIcon={<ChevronLeftIcon />} onClick={() => setWeekOffset((o) => o - 1)}>
             Prev
           </Button>
-          <Typography variant="body1" fontWeight={600} sx={{ minWidth: 200, textAlign: 'center' }}>
+          <Typography variant="body1" fontWeight={600} sx={{ minWidth: 210, textAlign: 'center' }}>
             {weekLabel(weekStart)}
           </Typography>
-          <Button
-            size="small"
-            variant="outlined"
-            endIcon={<ChevronRightIcon />}
-            onClick={() => setWeekOffset((o) => o + 1)}
-          >
+          <Button size="small" variant="outlined" endIcon={<ChevronRightIcon />} onClick={() => setWeekOffset((o) => o + 1)}>
             Next
           </Button>
-          <Button
-            size="small"
-            variant="text"
-            onClick={() => setWeekOffset(0)}
-            sx={{ ml: 1 }}
-          >
+          <Button size="small" variant="text" onClick={() => setWeekOffset(0)} sx={{ ml: 1 }}>
             Today
           </Button>
         </Box>
 
-        {/* Calendar grid wrapper */}
-        <Box
-          sx={{
-            border: '1px solid',
-            borderColor: 'divider',
-            borderRadius: 1,
-            overflow: 'hidden',
-          }}
-        >
+        {/* Calendar */}
+        <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, overflow: 'hidden', bgcolor: 'background.paper' }}>
+
           {/* Day header row */}
-          <Box
-            sx={{
-              display: 'flex',
-              borderBottom: '1px solid',
-              borderColor: 'divider',
-              bgcolor: 'background.paper',
-            }}
-          >
-            {/* Corner cell */}
+          <Box sx={{ display: 'flex', borderBottom: '1px solid', borderColor: 'divider' }}>
             <Box sx={{ width: TIME_COL_WIDTH, flexShrink: 0 }} />
             {days.map((day, i) => {
               const isToday = isSameDay(day, today)
@@ -206,32 +213,11 @@ export function FlightsClient({ flights }: FlightsClientProps) {
                     bgcolor: isToday ? 'rgba(30,64,175,0.06)' : 'transparent',
                   }}
                 >
-                  <Typography
-                    variant="caption"
-                    display="block"
-                    color={isToday ? 'primary.main' : 'text.secondary'}
-                    fontWeight={isToday ? 700 : 400}
-                    sx={{ lineHeight: 1.2, mb: 0.5 }}
-                  >
+                  <Typography variant="caption" display="block" color={isToday ? 'primary.main' : 'text.secondary'} fontWeight={isToday ? 700 : 400} sx={{ lineHeight: 1.2, mb: 0.5 }}>
                     {DAY_NAMES[i]}
                   </Typography>
-                  <Box
-                    sx={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      width: 28,
-                      height: 28,
-                      borderRadius: '50%',
-                      bgcolor: isToday ? 'primary.main' : 'transparent',
-                    }}
-                  >
-                    <Typography
-                      variant="body2"
-                      fontWeight={700}
-                      color={isToday ? 'white' : 'text.primary'}
-                      sx={{ lineHeight: 1 }}
-                    >
+                  <Box sx={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28, borderRadius: '50%', bgcolor: isToday ? 'primary.main' : 'transparent' }}>
+                    <Typography variant="body2" fontWeight={700} color={isToday ? 'white' : 'text.primary'} sx={{ lineHeight: 1 }}>
                       {day.getDate()}
                     </Typography>
                   </Box>
@@ -240,58 +226,21 @@ export function FlightsClient({ flights }: FlightsClientProps) {
             })}
           </Box>
 
-          {/* Scrollable time grid */}
-          <Box
-            ref={gridRef}
-            sx={{
-              overflowY: 'auto',
-              maxHeight: 'calc(100vh - 220px)',
-              position: 'relative',
-              bgcolor: 'background.paper',
-            }}
-          >
+          {/* Scrollable grid */}
+          <Box ref={gridRef} sx={{ overflowY: 'auto', maxHeight: 'calc(100vh - 230px)', position: 'relative' }}>
             {weekFlights.length === 0 && (
-              <Box
-                sx={{
-                  position: 'absolute',
-                  inset: 0,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 1.5,
-                  color: 'text.disabled',
-                  zIndex: 2,
-                  pointerEvents: 'none',
-                  minHeight: hours.length * CELL_HEIGHT,
-                }}
-              >
+              <Box sx={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1.5, color: 'text.disabled', zIndex: 2, pointerEvents: 'none', minHeight: hours.length * CELL_HEIGHT }}>
                 <AirplanemodeActiveIcon sx={{ fontSize: 48 }} />
-                <Typography variant="body1" fontWeight={600}>
-                  No flights this week
-                </Typography>
-                <Typography variant="body2" textAlign="center">
-                  Navigate to another week or wait for bookings to appear.
-                </Typography>
+                <Typography variant="body1" fontWeight={600}>No flights this week</Typography>
+                <Typography variant="body2" textAlign="center">Approve suggestions in the Queue to schedule flights.</Typography>
               </Box>
             )}
 
-            {/* Hour rows */}
             <Box sx={{ display: 'flex', position: 'relative' }}>
-              {/* Time label column */}
+              {/* Time labels */}
               <Box sx={{ width: TIME_COL_WIDTH, flexShrink: 0 }}>
                 {hours.map((h) => (
-                  <Box
-                    key={h}
-                    sx={{
-                      height: CELL_HEIGHT,
-                      display: 'flex',
-                      alignItems: 'flex-start',
-                      justifyContent: 'flex-end',
-                      pr: 1,
-                      pt: 0.5,
-                    }}
-                  >
+                  <Box key={h} sx={{ height: CELL_HEIGHT, display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-end', pr: 1, pt: 0.5 }}>
                     <Typography variant="caption" color="text.disabled" sx={{ fontSize: 10 }}>
                       {h === 12 ? '12 PM' : h > 12 ? `${h - 12} PM` : `${h} AM`}
                     </Typography>
@@ -302,129 +251,89 @@ export function FlightsClient({ flights }: FlightsClientProps) {
               {/* Day columns */}
               {days.map((day, dayIdx) => {
                 const isToday = isSameDay(day, today)
-                const dayFlights = weekFlights.filter((f) =>
-                  isSameDay(new Date(f.candidate.startTime), day),
-                )
+                const dayFlights = weekFlights.filter((f) => isSameDay(new Date(f.candidate.startTime), day))
+                const laid = layoutBlocks(dayFlights)
 
                 return (
                   <Box
                     key={dayIdx}
-                    sx={{
-                      flex: 1,
-                      borderLeft: '1px solid',
-                      borderColor: 'divider',
-                      position: 'relative',
-                      bgcolor: isToday ? 'rgba(30,64,175,0.03)' : 'transparent',
-                    }}
+                    sx={{ flex: 1, borderLeft: '1px solid', borderColor: 'divider', position: 'relative', bgcolor: isToday ? 'rgba(30,64,175,0.03)' : 'transparent' }}
                   >
-                    {/* Hour row dividers */}
+                    {/* Hour grid lines */}
                     {hours.map((h, rowIdx) => (
-                      <Box
-                        key={h}
-                        sx={{
-                          height: CELL_HEIGHT,
-                          borderBottom: '1px solid',
-                          borderColor: 'divider',
-                          bgcolor:
-                            rowIdx % 2 === 1 ? 'rgba(0,0,0,0.015)' : 'transparent',
-                        }}
-                      />
+                      <Box key={h} sx={{ height: CELL_HEIGHT, borderBottom: '1px solid', borderColor: 'divider', bgcolor: rowIdx % 2 === 1 ? 'rgba(0,0,0,0.012)' : 'transparent' }} />
                     ))}
 
-                    {/* Flight blocks */}
-                    {dayFlights.map((flight) => {
+                    {/* Flight blocks — side-by-side when overlapping */}
+                    {laid.map(({ flight, col, totalCols }) => {
                       const start = new Date(flight.candidate.startTime)
                       const end = new Date(flight.candidate.endTime)
-                      const startDecimal = start.getHours() + start.getMinutes() / 60
-                      const endDecimal = end.getHours() + end.getMinutes() / 60
-                      const durationMinutes = (endDecimal - startDecimal) * 60
-                      const top = (startDecimal - HOUR_START) * CELL_HEIGHT
-                      const height = Math.max((durationMinutes / 60) * CELL_HEIGHT, 24)
+                      const startH = start.getHours() + start.getMinutes() / 60
+                      const endH = end.getHours() + end.getMinutes() / 60
+                      const top = (startH - HOUR_START) * CELL_HEIGHT
+                      const height = Math.max((endH - startH) * CELL_HEIGHT, 24)
+                      const color = WORKFLOW_COLORS[flight.workflowType] ?? '#6B7280'
 
-                      const colorToken =
-                        WORKFLOW_COLORS[flight.workflowType] ?? 'grey.600'
+                      // Side-by-side: divide column width evenly, leave 3px gap on each side
+                      const gutter = 3
+                      const colW = `calc((100% - ${gutter * 2}px) / ${totalCols})`
+                      const leftOffset = `calc(${gutter}px + (100% - ${gutter * 2}px) / ${totalCols} * ${col})`
 
                       const studentName =
                         STUDENT_NAMES[flight.candidate.studentId] ??
-                        (flight.workflowType === 'discovery_flight'
-                          ? 'Discovery Prospect'
-                          : flight.candidate.studentId)
+                        (flight.workflowType === 'discovery_flight' ? 'Discovery Prospect' : flight.candidate.studentId)
                       const instructorName =
-                        INSTRUCTOR_NAMES[flight.candidate.instructorId] ??
-                        flight.candidate.instructorId
+                        INSTRUCTOR_NAMES[flight.candidate.instructorId] ?? flight.candidate.instructorId
+
+                      const timeLabel = `${start.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })} – ${end.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`
 
                       return (
-                        <Box
+                        <Tooltip
                           key={flight.id}
-                          sx={{
-                            position: 'absolute',
-                            top,
-                            left: 3,
-                            right: 3,
-                            height,
-                            bgcolor: colorToken,
-                            borderRadius: 0.75,
-                            overflow: 'hidden',
-                            px: 0.75,
-                            py: 0.5,
-                            cursor: 'default',
-                            zIndex: 1,
-                          }}
+                          title={`${studentName} · ${instructorName} · ${timeLabel}`}
+                          placement="top"
+                          arrow
                         >
-                          <Typography
+                          <Box
                             sx={{
-                              fontSize: 11,
-                              fontWeight: 700,
-                              color: 'white',
-                              lineHeight: 1.3,
+                              position: 'absolute',
+                              top,
+                              left: leftOffset,
+                              width: colW,
+                              height,
+                              bgcolor: color,
+                              borderRadius: 0.75,
                               overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              whiteSpace: 'nowrap',
+                              px: 0.75,
+                              py: 0.4,
+                              cursor: 'default',
+                              zIndex: 1,
+                              boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                              '&:hover': { filter: 'brightness(1.1)', zIndex: 3 },
+                              transition: 'filter 0.1s',
                             }}
                           >
-                            {studentName}
-                          </Typography>
-                          {height >= 36 && (
-                            <Typography
-                              sx={{
-                                fontSize: 10,
-                                color: 'rgba(255,255,255,0.8)',
-                                lineHeight: 1.3,
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                                whiteSpace: 'nowrap',
-                              }}
-                            >
-                              {instructorName}
+                            <Typography sx={{ fontSize: 11, fontWeight: 700, color: 'white', lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {studentName}
                             </Typography>
-                          )}
-                        </Box>
+                            {height >= 36 && (
+                              <Typography sx={{ fontSize: 10, color: 'rgba(255,255,255,0.82)', lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {instructorName}
+                              </Typography>
+                            )}
+                            {height >= 52 && (
+                              <Typography sx={{ fontSize: 9, color: 'rgba(255,255,255,0.65)', lineHeight: 1.3 }}>
+                                {timeLabel}
+                              </Typography>
+                            )}
+                          </Box>
+                        </Tooltip>
                       )
                     })}
 
-                    {/* Current-time red line (only in today's column) */}
+                    {/* Current-time red line */}
                     {isToday && showNowLine && (
-                      <Box
-                        sx={{
-                          position: 'absolute',
-                          top: nowTop,
-                          left: 0,
-                          right: 0,
-                          height: 2,
-                          bgcolor: 'error.main',
-                          zIndex: 2,
-                          '&::before': {
-                            content: '""',
-                            position: 'absolute',
-                            left: -4,
-                            top: -4,
-                            width: 10,
-                            height: 10,
-                            borderRadius: '50%',
-                            bgcolor: 'error.main',
-                          },
-                        }}
-                      />
+                      <Box sx={{ position: 'absolute', top: nowTop, left: 0, right: 0, height: 2, bgcolor: 'error.main', zIndex: 2, pointerEvents: 'none', '&::before': { content: '""', position: 'absolute', left: -4, top: -4, width: 10, height: 10, borderRadius: '50%', bgcolor: 'error.main' } }} />
                     )}
                   </Box>
                 )

@@ -131,6 +131,31 @@ export async function orchestrateBooking(
   // ── 4. Update suggestion to booked ────────────────────────────────────
   await updateSuggestionStatus(ctx, suggestionId, 'booked', approvedBy)
 
+  // ── 4b. Expire conflicting pending suggestions ─────────────────────────
+  // Any other pending suggestion for the same instructor at the same start
+  // time is now impossible to fulfill — expire them so the operator never
+  // sees a double-booking opportunity in the queue.
+  await prisma.suggestion.updateMany({
+    where: {
+      operatorId: ctx.operatorId,
+      id: { not: suggestionId },
+      status: 'pending',
+      instructorId: suggestion.candidate.instructorId,
+      startTime: suggestion.candidate.startTime,
+    },
+    data: { status: 'expired' },
+  })
+
+  // ── 4c. Update discovery prospect status ───────────────────────────────
+  // For discovery flights, candidate.studentId is the prospect ID.
+  // Mark it booked so the Discovery page reflects the confirmed state.
+  if (suggestion.workflowType === 'discovery_flight') {
+    await prisma.discoveryProspect.updateMany({
+      where: { id: suggestion.candidate.studentId, operatorId: ctx.operatorId },
+      data: { status: 'booked' },
+    })
+  }
+
   await writeAuditEvent(ctx, {
     eventType: 'booking.succeeded',
     actorId: approvedBy,

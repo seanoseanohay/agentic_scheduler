@@ -159,21 +159,40 @@ export class MockFspClient implements IFspClient {
   }
 
   async getAvailableSlots(opts: { start: Date; end: Date }): Promise<FspAvailabilitySlot[]> {
+    // Four slots per day at realistic Central Time business hours (expressed as UTC):
+    //   13:00 UTC = 8 AM CDT  — Dave Martinez, N12345 (C172)
+    //   14:00 UTC = 9 AM CDT  — Eve Thompson,  N67890 (PA28)
+    //   17:00 UTC = 12 PM CDT — Dave Martinez, N12345 (C172)
+    //   18:00 UTC = 1 PM CDT  — Eve Thompson,  N67890 (PA28)
+    // All 2-hour flights end before civil sunset (20:30 UTC). Different instructors
+    // per time block means no instructor conflicts are possible within a day.
+    const DAILY_SLOTS = [
+      { utcHour: 13, instructorId: 'ins-001', aircraftId: 'ac-001' },
+      { utcHour: 14, instructorId: 'ins-002', aircraftId: 'ac-002' },
+      { utcHour: 17, instructorId: 'ins-001', aircraftId: 'ac-001' },
+      { utcHour: 18, instructorId: 'ins-002', aircraftId: 'ac-002' },
+    ]
+
     const slots: FspAvailabilitySlot[] = []
-    // Pin each slot to 10:00 AM UTC so daylight constraint always passes in mock
     const cursor = new Date(opts.start)
-    cursor.setUTCHours(10, 0, 0, 0)
-    // If pinning to 10 AM already passed today, start tomorrow
-    if (cursor <= opts.start) cursor.setDate(cursor.getDate() + 1)
+    cursor.setUTCHours(0, 0, 0, 0)
+    if (cursor <= opts.start) cursor.setUTCDate(cursor.getUTCDate() + 1)
+
     while (cursor < opts.end) {
-      slots.push({
-        startTime: new Date(cursor),
-        endTime: new Date(cursor.getTime() + 2 * 60 * 60 * 1000),
-        instructorId: 'ins-001',
-        aircraftId: 'ac-001',
-        locationId: 'loc-001',
-      })
-      cursor.setDate(cursor.getDate() + 1)
+      for (const def of DAILY_SLOTS) {
+        const start = new Date(cursor)
+        start.setUTCHours(def.utcHour, 0, 0, 0)
+        if (start >= opts.start && start < opts.end) {
+          slots.push({
+            startTime: start,
+            endTime: new Date(start.getTime() + 2 * 60 * 60 * 1000),
+            instructorId: def.instructorId,
+            aircraftId: def.aircraftId,
+            locationId: 'loc-001',
+          })
+        }
+      }
+      cursor.setUTCDate(cursor.getUTCDate() + 1)
     }
     return slots
   }

@@ -75,5 +75,5 @@ export default async function FlightsPage() {
     (a, b) => new Date(a.candidate.startTime).getTime() - new Date(b.candidate.startTime).getTime(),
   )
 
-  return <FlightsClient flights={flights} />
+  return <FlightsClient flights={flights} apiUrl={apiUrl} token={token} />
 }
